@@ -185,6 +185,8 @@ parseConjugationRequest parts = do
           return cr { crRespectful = True }
         "adj" ->
           updateType TRAdjective
+        "adv" ->
+          updateType TRAdverb
         "inf" ->
           updateType TRInfinitive
         "com" ->
@@ -194,6 +196,24 @@ parseConjugationRequest parts = do
         "fut" ->
           updateTense TRFuture
         "hab" ->
+          updateTense TRHabitual
+        "g" ->
+          return cr { crGuess = True }
+        "j" ->
+          updateType TRAdjective
+        "v" ->
+          updateType TRAdverb
+        "i" ->
+          updateType TRInfinitive
+        "c" ->
+          updateType TRCommand
+        "p" ->
+          updateTense TRPast
+        "r" ->
+          updateTense TRPresent
+        "f" ->
+          updateTense TRFuture
+        "h" ->
           updateTense TRHabitual
         other ->
           case
