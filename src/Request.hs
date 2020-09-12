@@ -532,13 +532,44 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       { verbRoot = "sol"
       , verbClass = Class3 }
   , defaultVerb
+      { verbRoot = "paNNu"
+      , verbClass = Class3 }
+  , defaultVerb
       { verbRoot = "vaar"
       , verbStem = Just "vaaru"
       , verbClass = Class3 } ]
 
 defaultVerbList :: VerbList
 defaultVerbList = foldl' (flip addVerb) emptyVerbList
-  [ -- Class 1 Weak
+  [ -- Common irregular verbs
+    defaultVerb
+      { verbRoot = "azhu"
+      , verbDefinitions = ["cry"]
+      , verbClass = Class1 Weak }
+  , defaultVerb
+      { verbRoot = "kal"
+      , verbDefinitions = ["learn"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "pOdhu"
+      , verbDefinitions = ["be enough"]
+      , verbDefective = True
+      , verbPast = Just $ ChoiceString ["pOndh", "pOrndh"] []
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "kaaN"
+      , verbDefinitions = ["see"]
+      , verbPast = Just "kaND"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "aa"
+      , verbDefinitions = ["become", "happen", "be done"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "paNNu"
+      , verbDefinitions = ["make"]
+      , verbClass = Class3 }
+  , -- Class 1 Weak
     defaultVerb
       { verbRoot = "saappiDu"
       , verbDefinitions = ["eat"]
