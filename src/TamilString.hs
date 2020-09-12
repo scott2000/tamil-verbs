@@ -14,85 +14,78 @@ class TamilShow a where
   tamilShow :: a -> TamilString
 
 data ChoiceString = ChoiceString
-  { csBest :: [TamilString]
-  , csCommon :: [TamilString]
-  , csOther :: [TamilString] }
+  { csCommon :: [TamilString]
+  , csUncommon :: [TamilString] }
 
 instance Semigroup ChoiceString where
-  ChoiceString xb xc xo <> ChoiceString yb yc yo =
-    ChoiceString (xb ++ yb) (xc ++ yc) (xo ++ yo)
+  ChoiceString xc xu <> ChoiceString yc yu =
+    ChoiceString (xc ++ yc) (xu ++ yu)
 
 instance Monoid ChoiceString where
-  mempty = ChoiceString [] [] []
+  mempty = ChoiceString [] []
 
 instance Show ChoiceString where
-  show (ChoiceString [] [] []) = "<none>"
-  show (ChoiceString [] [] o) =
-    intercalate ", " $ map show o
-  show (ChoiceString b c _) =
-    intercalate "; " $ map (intercalate ", " . map show) $ filter (not . null) [b, c]
+  show = showUsing show
 
 instance IsString ChoiceString where
-  fromString = best . fromString
-
-best :: TamilString -> ChoiceString
-best s = ChoiceString [s] [] []
+  fromString = common . fromString
 
 common :: TamilString -> ChoiceString
-common s = ChoiceString [] [s] []
+common s = ChoiceString [s] []
 
-other :: TamilString -> ChoiceString
-other s = ChoiceString [] [] [s]
+uncommon :: TamilString -> ChoiceString
+uncommon s = ChoiceString [] [s]
+
+hide :: ChoiceString -> ChoiceString
+hide (ChoiceString [] u) = ChoiceString u []
+hide (ChoiceString c  _) = ChoiceString c []
+
+showUsing :: (TamilString -> String) -> ChoiceString -> String
+showUsing _ (ChoiceString [] []) = "<none>"
+showUsing showFunction (ChoiceString c u) =
+  intercalate "; " $ map (intercalate ", " . map showFunction) $ filter (not . null) [c', u']
+  where
+    c' = nub c
+    u' = nub $ filter (`notElem` c') u
 
 (|+) :: ChoiceString -> TamilString -> ChoiceString
 cs |+ s =
   forChoice cs \c -> suffix c s
 
 (|+|) :: ChoiceString -> ChoiceString -> ChoiceString
-ChoiceString xb xc xo |+| ChoiceString yb yc yo =
-  ChoiceString bb (bc ++ cb ++ cc) (bo ++ co ++ ob ++ oc ++ oo)
+ChoiceString xc xu |+| ChoiceString yc yu =
+  ChoiceString cc (uc ++ cu ++ uu)
   where
-    bb = liftA2 suffix xb yb
-    bc = liftA2 suffix xb yc
-    bo = liftA2 suffix xb yo
-    cb = liftA2 suffix xc yb
-    cc = liftA2 suffix xc yc
-    co = liftA2 suffix xc yo
-    ob = liftA2 suffix xo yb
-    oc = liftA2 suffix xo yc
-    oo = liftA2 suffix xo yo
+    suffix' = flip $ liftA2 $ flip suffix
+    cc = suffix' xc yc
+    cu = suffix' xc yu
+    uc = suffix' xu yc
+    uu = suffix' xu yu
 
 filterMapChoice :: ChoiceString -> (TamilString -> Maybe TamilString) -> ChoiceString
-filterMapChoice (ChoiceString b c o) f =
-  ChoiceString (mapMaybe f b) (mapMaybe f c) (mapMaybe f o)
+filterMapChoice (ChoiceString c u) f =
+  ChoiceString (mapMaybe f c) (mapMaybe f u)
 
 filterChoice :: ChoiceString -> (TamilString -> Bool) -> ChoiceString
-filterChoice (ChoiceString b c o) pred =
-  ChoiceString (filter pred b) (filter pred c) (filter pred o)
+filterChoice (ChoiceString c u) pred =
+  ChoiceString (filter pred c) (filter pred u)
 
 forChoice :: ChoiceString -> (TamilString -> TamilString) -> ChoiceString
-forChoice (ChoiceString b c o) f =
-  ChoiceString (map f b) (map f c) (map f o)
+forChoice (ChoiceString c u) f =
+  ChoiceString (map f c) (map f u)
+
+allChoices :: ChoiceString -> [TamilString]
+allChoices (ChoiceString c u) = c ++ u
 
 collapse :: ChoiceString -> TamilString
-collapse (ChoiceString (x:_) _ _) = x
-collapse (ChoiceString _ (x:_) _) = x
-collapse (ChoiceString _ _ (x:_)) = x
-collapse (ChoiceString _ _ _) = error "collapse: no valid choices"
+collapse (ChoiceString (x:_) _) = x
+collapse (ChoiceString _ (x:_)) = x
+collapse (ChoiceString _ _) = error "collapse: no valid choices"
 
 promote :: ChoiceString -> ChoiceString
-promote (ChoiceString [] (b:c) o) =
-  ChoiceString [b] c o
-promote (ChoiceString [] [] (b:o)) =
-  ChoiceString [b] [] o
+promote (ChoiceString [] (c:u)) =
+  ChoiceString [c] u
 promote other = other
-
-halfPromote :: ChoiceString -> ChoiceString
-halfPromote (ChoiceString b@(_:_) c o) =
-  ChoiceString [] (b ++ c) o
-halfPromote (ChoiceString [] [] (c:o)) =
-  ChoiceString [] [c] o
-halfPromote other = other
 
 data VowelLength
   = Short
@@ -154,6 +147,12 @@ isShortVowel = \case
   E Short -> True
   O Short -> True
   _       -> False
+
+isShortishVowel :: Vowel -> Bool
+isShortishVowel = \case
+  Ai -> True
+  Au -> True
+  v  -> isShortVowel v
 
 data Vallinam
   = K
@@ -225,6 +224,13 @@ consonantWithA = \case
   Medium V          -> 'வ'
   Medium Zh         -> 'ழ'
   Medium LRetroflex -> 'ள'
+
+mayDouble :: Consonant -> Bool
+mayDouble = \case
+  Medium LRetroflex -> True
+  Medium LAlveolar  -> True
+  Soft _            -> True
+  _                 -> False
 
 data TamilLetter
   = Vowel !Vowel
@@ -585,19 +591,8 @@ toTamil (TamilString str) =
           go (vowelInitial v : acc) rest
 
 normalize :: TamilString -> TamilString
-normalize (TamilString str) =
-  TamilString $ map go $
-    case str of
-      Vowel (U Short) : Consonant a : rest@(Consonant b : _) | a == b ->
-        rest
-      Vowel (U Short) : Consonant (Hard h) : Consonant (Soft s) : rest | s == getPaired h ->
-        Consonant (Hard h) : rest
-      Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortVowel v ->
-        rest
-      Vowel (U Short) : rest ->
-        rest
-      _ ->
-        str
+normalize =
+  TamilString . map go . untamil
   where
     go = \case
       Vowel (U _) -> Vowel $ U Short
@@ -639,9 +634,14 @@ endsInSoftConsonant = \case
   TamilString (Consonant (Soft _) : _) -> True
   _ -> False
 
+endsInDoublingConsonant :: TamilString -> Bool
+endsInDoublingConsonant = \case
+  TamilString (Consonant c : _) -> mayDouble c
+  _ -> False
+
 endsInLongVowel :: TamilString -> Bool
 endsInLongVowel = \case
-  TamilString (Vowel v : _) -> not $ isShortVowel v
+  TamilString (Vowel v : _) -> not $ isShortishVowel v
   _ -> False
 
 stripSuffix :: TamilString -> TamilString -> Maybe TamilString
@@ -676,11 +676,11 @@ suffix (TamilString root) (TamilString suffix) =
         (Consonant _, _) ->
           suffix ++ root
         (_, Consonant c)
-          | restIsShort ->
+          | restIsShort, c /= Medium R, c /= Medium Zh ->
             middle c
           | otherwise ->
             suffix ++ root
-        (Vowel (I Short), Vowel v) | not $ isShortVowel v ->
+        (Vowel (I Short), Vowel v) | not $ isShortishVowel v ->
           middle $ Medium Y
         (_, Vowel v) ->
           case v of

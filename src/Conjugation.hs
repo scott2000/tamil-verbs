@@ -1,5 +1,8 @@
 module Conjugation
   ( IrrationalSubject (..)
+  , allIrrationalSubjects
+  , ThirdPersonSubject (..)
+  , allThirdPersonSubjects
   , Subject (..)
   , allSubjects
   , FiniteConjugation (..)
@@ -24,31 +27,47 @@ instance TamilShow IrrationalSubject where
     Adhu    -> "adhu"
     Avai    -> "avai"
 
-data Subject
-  = Naan
-  | Naam
-  | Naangal
-  | Nee
-  | Neengal
-  | Avan
+allIrrationalSubjects :: [IrrationalSubject]
+allIrrationalSubjects = [Adhu, Avai]
+
+data ThirdPersonSubject
+  = Avan
   | Aval
   | Avar
   | Avargal
   | Irrational IrrationalSubject
   deriving Eq
 
-instance TamilShow Subject where
+allThirdPersonSubjects :: [ThirdPersonSubject]
+allThirdPersonSubjects =
+  [ Avan, Aval, Avar, Avargal ]
+  ++ map Irrational allIrrationalSubjects
+
+instance TamilShow ThirdPersonSubject where
   tamilShow = \case
-    Naan         -> "naan"
-    Naam         -> "naam"
-    Naangal      -> "naangaL"
-    Nee          -> "nee"
-    Neengal      -> "neengaL"
     Avan         -> "avan"
     Aval         -> "avaL"
     Avar         -> "avar"
     Avargal      -> "avargaL"
     Irrational i -> tamilShow i
+
+data Subject
+  = Naan
+  | Naam
+  | Naangal
+  | Nee
+  | Neengal
+  | Third ThirdPersonSubject
+  deriving Eq
+
+instance TamilShow Subject where
+  tamilShow = \case
+    Naan    -> "naan"
+    Naam    -> "naam"
+    Naangal -> "naangaL"
+    Nee     -> "nee"
+    Neengal -> "neengaL"
+    Third t -> tamilShow t
 
 instance Show Subject where
   show = map toLower . toLatin . tamilShow
@@ -56,37 +75,36 @@ instance Show Subject where
 allSubjects :: [Subject]
 allSubjects =
   [ Naan, Naam, Naangal
-  , Nee, Neengal
-  , Avan, Aval, Avar, Avargal
-  , Irrational Adhu, Irrational Avai ]
+  , Nee, Neengal ]
+  ++ map Third allThirdPersonSubjects
 
 simpleSuffix :: Subject -> TamilString
 simpleSuffix = \case
-  Naan            -> "En"
-  Naam            -> "Om"
-  Naangal         -> "Om"
-  Nee             -> "aay"
-  Neengal         -> "eergaL"
-  Avan            -> "aan"
-  Aval            -> "aaL"
-  Avar            -> "aar"
-  Avargal         -> "aargaL"
-  Irrational Adhu -> "adhu"
-  Irrational Avai -> "ana"
+  Naan                    -> "En"
+  Naam                    -> "Om"
+  Naangal                 -> "Om"
+  Nee                     -> "aay"
+  Neengal                 -> "eergaL"
+  Third Avan              -> "aan"
+  Third Aval              -> "aaL"
+  Third Avar              -> "aar"
+  Third Avargal           -> "aargaL"
+  Third (Irrational Adhu) -> "adhu"
+  Third (Irrational Avai) -> "ana"
 
 subjectSuffix :: Subject -> ChoiceString
 subjectSuffix = \case
-  Avargal ->
-    ChoiceString ["aargaL"] ["anar"] []
+  Third Avargal ->
+    ChoiceString ["aargaL", "anar"] []
   other ->
-    best $ simpleSuffix other
+    common $ simpleSuffix other
 
 usingAvaiSuffix :: Subject -> (Bool -> ChoiceString) -> ChoiceString
 usingAvaiSuffix subject f =
   case subject of
-    Avargal ->
+    Third Avargal ->
       (f False |+ "aargaL") <> (f True |+| common "ar")
-    Irrational Avai ->
+    Third (Irrational Avai) ->
       f True |+ "a"
     other ->
       f False |+ simpleSuffix other
@@ -99,65 +117,46 @@ getPast verb =
       let root = verbRoot verb in
       case (verbClass verb, getEnding root) of
         (Class1 Weak, HardAndU h) ->
-          best $ replaceLastLetter root $ TamilString [Consonant $ Hard h, Consonant $ Hard h]
+          common $ replaceLastLetter root $ TamilString [Consonant $ Hard h, Consonant $ Hard h]
         (Class1 _, Retroflex) ->
-          best $ replaceLastLetter root "TT"
+          common $ replaceLastLetter root "TT"
         (Class1 _, Alveolar) ->
-          best $ replaceLastLetter root "RR"
+          common $ replaceLastLetter root "RR"
         (Class1 Weak, _) ->
-          best $ suffix root "dh"
+          common $ suffix root "dh"
         (Class1 Strong, _) ->
-          best $ suffix root "tt"
+          common $ suffix root "tt"
         (Class2 _, Retroflex) ->
-          best $ replaceLastLetter root "NT"
+          common $ replaceLastLetter root "NT"
         (Class2 _, Alveolar) ->
-          best $ replaceLastLetter root "ndR"
+          common $ replaceLastLetter root "ndR"
         (Class2 _, _) ->
-          best $ suffix root "ndh"
+          common $ suffix root "ndh"
         (Class3, ending) ->
           let basic = suffix root "in" in
           case ending of
             LongVowel ->
-              ChoiceString [root `append` "n"] [] [basic, root `append` "gin"]
+              ChoiceString [root `append` "n"] [basic, root `append` "gin"]
             Retroflex ->
-              ChoiceString [replaceLastLetter root "NN"] [] [basic]
+              ChoiceString [replaceLastLetter root "NN"] [basic]
             Alveolar ->
-              ChoiceString [replaceLastLetter root "nn"] [] [basic]
+              ChoiceString [replaceLastLetter root "nn"] [basic]
             _ ->
-              best basic
+              common basic
 
-addToStem :: Verb -> Consonant -> Vallinam -> ChoiceString
-addToStem verb ifWeak ifStrong =
+getPresentRoot :: Verb -> ChoiceString
+getPresentRoot verb =
   forChoice (getStem verb) \stem ->
-    case getStrength verb of
-      Weak ->
-        -- If weak, use the weak letter
-        stem `appendLetter` Consonant ifWeak
-      Strong ->
-        -- If strong, use the strong letter
-        let
-          strongLetter = Consonant $ Hard ifStrong
-          withSingle = stem `appendLetter` strongLetter
-        in
-          if endsInHardConsonant stem then
-            -- If the stem ends in a hard consonant, then leave it single
-            withSingle
-          else
-            -- Otherwise, double it
-            withSingle `appendLetter` strongLetter
+    stem `append` case getStrength verb of
+      Strong | not $ endsInHardConsonant stem -> "kk"
+      _ -> "k"
 
 getPresent :: Verb -> Bool -> ChoiceString
 getPresent verb avai =
   if avai then
-    root |+ "indRan"
+    getPresentRoot verb |+ "indRan"
   else
-    root |+| ChoiceString ["iR"] [] ["indR"]
-  where
-    root =
-      forChoice (getStem verb) \stem ->
-        stem `append` case getStrength verb of
-          Strong | not $ endsInHardConsonant stem -> "kk"
-          _ -> "k"
+    getPresentRoot verb |+| ChoiceString ["iR"] ["indR"]
 
 {-
 
@@ -172,29 +171,112 @@ Class 3 with long vowel ending => -ன் - past, -ய் adverb, -ங்கள�
 
 getFuture :: Verb -> ChoiceString
 getFuture verb =
-  forChoice (getStem verb) \stem ->
-    stem `append`
-      if endsInHardConsonant stem || endsInSoftConsonant stem then
-        "p"
-      else
-        case getStrength verb of
-          Weak   -> "v"
-          Strong -> "pp"
+  case verbFuture verb of
+    Just future -> future
+    Nothing ->
+      forChoice (getStem verb) \stem ->
+        stem `append`
+          if endsInHardConsonant stem || endsInSoftConsonant stem then
+            "p"
+          else
+            case getStrength verb of
+              Weak   -> "v"
+              Strong -> "pp"
 
-getFutureAdhu :: Verb -> TamilString
+getFutureAdhu :: Verb -> ChoiceString
 getFutureAdhu verb =
-  let stem = collapse $ getStem verb in
-  stem `append`
-    if endsInHardConsonant stem || endsInLongVowel stem then
-      "k"
-    else
+  case verbFutureAdhu verb of
+    Just future -> future
+    Nothing ->
+      let stem = collapse $ getStem verb in
       case getStrength verb of
-        Weak   -> ""
-        Strong -> "kk"
+        Weak ->
+          if endsInLongVowel stem then
+            let basic = stem `append` "gum" in
+            case verbClass verb of
+              Class3 ->
+                let alt = stem `append` "m" in
+                if isSingleLetter stem then
+                  ChoiceString [alt, basic] []
+                else
+                  ChoiceString [basic] [alt]
+              _ ->
+                common basic
+          else
+            common $ suffix stem "um"
+        Strong ->
+          common $ stem `append`
+            if endsInHardConsonant stem then
+              "kum"
+            else
+              "kkum"
 
-getNoun :: Verb -> TamilString
-getNoun verb =
-  suffix (collapse $ getFuture verb) "adhu"
+getInfinitiveRoot :: Verb -> ChoiceString
+getInfinitiveRoot verb =
+  case verbInfinitiveRoot verb of
+    Just root -> root
+    Nothing ->
+      let stem = collapse $ getStem verb in
+      case getStrength verb of
+        Weak ->
+          if endsInLongVowel stem then
+            let basic = stem `append` "g" in
+            case verbClass verb of
+              Class3 ->
+                common basic
+              _ ->
+                ChoiceString [basic] [stem]
+          else
+            common stem
+        Strong ->
+          common $ stem `append`
+            if endsInHardConsonant stem then
+              "k"
+            else
+              "kk"
+
+getNegativeFutureAdhu :: Verb -> ChoiceString
+getNegativeFutureAdhu verb =
+  getInfinitiveRoot verb |+ "aadhu"
+
+getNegativeFutureAvai :: Verb -> ChoiceString
+getNegativeFutureAvai verb =
+  getInfinitiveRoot verb |+| uncommon "aa"
+
+getNounAdhu :: Verb -> ChoiceString
+getNounAdhu verb =
+  getFuture verb |+ "adhu"
+
+getNounThal :: Verb -> ChoiceString
+getNounThal verb =
+  let stem = collapse $ getStem verb in
+  case getStrength verb of
+    Weak ->
+      if endsInLongVowel stem then
+        let basic = stem `append` "gudhal" in
+        case verbClass verb of
+          Class3 ->
+            ChoiceString [basic] [stem `append` "dhal"]
+          _ ->
+            common basic
+      else
+        if endsInDoublingConsonant stem then
+          common $ suffix stem "udhal"
+        else
+          common $ stem `append` "dhal"
+    Strong ->
+      if endsInHardConsonant stem then
+        common $ stem `append` "kudhal"
+      else
+        ChoiceString [stem `append` "ttal"] [stem `append` "kkudhal"]
+
+getNounKai :: Verb -> ChoiceString
+getNounKai verb =
+  getPresentRoot verb |+| common "ai"
+
+getNounAl :: Verb -> ChoiceString
+getNounAl verb =
+  getInfinitive verb |+| common "l"
 
 getAdverb :: Verb -> ChoiceString
 getAdverb verb =
@@ -208,17 +290,36 @@ getAdverb verb =
           yi = root `append` "yi"
         in
           if isSingleLetter root then
-            ChoiceString [gi] [] [y, yi]
+            ChoiceString [gi, y] [yi]
           else
-            ChoiceString [y] [] [yi, gi]
+            ChoiceString [y] [yi, gi]
       else
-        best $ suffix root "i"
+        common $ suffix root "i"
     _ ->
       getPast verb |+ "u"
 
-getInfinitive :: Verb -> TamilString
+getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
-  suffix (getFutureAdhu verb) "a"
+  getInfinitiveRoot verb |+ "a"
+
+getRespectfulCommand :: Verb -> ChoiceString
+getRespectfulCommand verb =
+  case verbRespectfulCommand verb of
+    Just command -> command
+    Nothing ->
+      let root = verbRoot verb in
+      case verbClass verb of
+        Class3 | endsInLongVowel root ->
+          let
+            basic = root `append` "ngaL"
+            alt = root `append` "gungaL"
+          in
+            if isSingleLetter root then
+              ChoiceString [alt] [basic]
+            else
+              ChoiceString [basic] [alt]
+        _ ->
+          common $ suffix root "ungaL"
 
 getStem :: Verb -> ChoiceString
 getStem verb =
@@ -232,11 +333,11 @@ getStem verb =
           let root = verbRoot verb in
           case getEnding root of
             Retroflex ->
-              best $ replaceLastLetter root "T"
+              common $ replaceLastLetter root "T"
             Alveolar ->
-              best $ replaceLastLetter root "R"
+              common $ replaceLastLetter root "R"
             _ ->
-              best root
+              common root
 
 data FiniteConjugation
   = Past
@@ -247,7 +348,7 @@ data FiniteConjugation
 conjugateFinite :: FiniteConjugation -> Subject -> Verb -> ChoiceString
 conjugateFinite conjugation subject verb =
   case (conjugation, verbClass verb, subject) of
-    (Past, Class3, Irrational Adhu) ->
+    (Past, Class3, Third (Irrational Adhu)) ->
       let
         past = getPast verb
         nadhu = past |+ "adhu"
@@ -263,11 +364,18 @@ conjugateFinite conjugation subject verb =
               Just (TamilString rest `append` "tRu")
             _ ->
               Nothing
+        isIrregular =
+          case (verbPast verb, getEnding $ verbRoot verb) of
+            (Just _, _)    -> True
+            (_, LongVowel) -> True
+            (_, Retroflex) -> True
+            (_, Alveolar)  -> True
+            _              -> False
       in
-        if endsInLongVowel $ verbRoot verb then
-          promote nadhu <> halfPromote yadhu <> halfPromote yitru
+        if isIrregular then
+          promote nadhu <> promote yadhu <> promote yitru
         else
-          promote yadhu <> halfPromote nadhu <> halfPromote yitru
+          promote yadhu <> promote nadhu <> promote yitru
     (Past, _, _) ->
       usingAvaiSuffix subject \avai ->
         if avai then
@@ -283,8 +391,8 @@ conjugateFinite conjugation subject verb =
           getPast verb
     (Present, _, _) ->
       usingAvaiSuffix subject $ getPresent verb
-    (Future, _, Irrational _) ->
-      best $ suffix (getFutureAdhu verb) "um"
+    (Future, _, Third (Irrational _)) ->
+      getFutureAdhu verb
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
@@ -304,7 +412,7 @@ conjugatePositive conjugation verb =
     Finite finite subject ->
       conjugateFinite finite subject verb
     Adjective finite ->
-      forChoice (conjugateFinite finite (Irrational Adhu) verb) \case
+      forChoice (conjugateFinite finite (Third (Irrational Adhu)) verb) \case
         TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->
           TamilString rest
         other ->
@@ -312,26 +420,11 @@ conjugatePositive conjugation verb =
     Adverb ->
       getAdverb verb
     Noun ->
-      best $ getNoun verb
+      getNounAdhu verb <> getNounThal verb <> getNounKai verb <> getNounAl verb
     Command False ->
       getRoot verb
     Command True ->
-      case verbRespectfulCommand verb of
-        Just command -> command
-        Nothing ->
-          let root = verbRoot verb in
-          case verbClass verb of
-            Class3 | endsInLongVowel root ->
-              let
-                basic = root `append` "ngaL"
-                alt = root `append` "gungaL"
-              in
-                if isSingleLetter root then
-                  ChoiceString [alt] [] [basic]
-                else
-                  ChoiceString [basic] [] [alt]
-            _ ->
-              best $ suffix root "ungaL"
+      getRespectfulCommand verb
 
 data NegativeConjugation
   = NegativePastPresent
@@ -347,32 +440,25 @@ conjugateNegative :: NegativeConjugation -> Verb -> ChoiceString
 conjugateNegative conjugation verb =
   case conjugation of
     NegativePastPresent ->
-      best $ suffix (getInfinitive verb) "illai"
-    NegativeFuture (Irrational subject) ->
-      let
-        futureAdhu = getFutureAdhu verb
-        aadhu = suffix futureAdhu "aadhu"
-      in
-        case subject of
-          Adhu ->
-            best aadhu
-          Avai ->
-            ChoiceString [aadhu] [] [suffix futureAdhu "aa"]
+      getInfinitive verb |+ "illai"
+    NegativeFuture (Third (Irrational Adhu)) ->
+      getNegativeFutureAdhu verb
+    NegativeFuture (Third (Irrational Avai)) ->
+      getNegativeFutureAdhu verb <> getNegativeFutureAvai verb
     NegativeFuture subject ->
-      best $ suffix (suffix (getInfinitive verb) "maaTT") $ simpleSuffix subject
+      getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
     NegativeHabitual ->
-      best $ suffix (getNoun verb) "illai"
+      getNounAdhu verb |+ "illai"
     NegativeAdjective ->
-      let futureAdhu = getFutureAdhu verb in
-      ChoiceString [suffix futureAdhu "aadha"] [suffix futureAdhu "aa"] []
+      getNegativeFutureAdhu verb |+ "a" <> getNegativeFutureAvai verb
     NegativeNoun ->
-      best $ suffix (getFutureAdhu verb) "aadhadhu"
+      getInfinitiveRoot verb |+ "aadhadhu"
     NegativeAdverb ->
-      best $ suffix (getFutureAdhu verb) "aamal"
+      getInfinitiveRoot verb |+ "aamal"
     NegativeCommand False ->
-      best $ suffix (getFutureAdhu verb) "aadhE"
+      getInfinitiveRoot verb |+ "aadhE"
     NegativeCommand True ->
-      best $ suffix (getFutureAdhu verb) "aadheergaL"
+      getInfinitiveRoot verb |+ "aadheergaL"
 
 data Conjugation
   = Positive PositiveConjugation
@@ -389,4 +475,5 @@ conjugate conjugation verb =
       Negative negative ->
         conjugateNegative negative verb
       Infinitive ->
-        best $ getInfinitive verb
+        getInfinitive verb
+

@@ -29,7 +29,7 @@ getEnding (TamilString str) =
         _                 -> OtherEnding
     Vowel (U Short) : Consonant (Hard h) : Vowel _ : _ ->
       HardAndU h
-    Vowel v : _ | not $ isShortVowel v ->
+    Vowel v : _ | not $ isShortishVowel v ->
       LongVowel
     _ ->
       OtherEnding
@@ -58,9 +58,12 @@ data Verb = Verb
   , verbPrefix :: ChoiceString
   , verbDefinitions :: [String]
   , verbDefective :: Bool
-  , verbRespectfulCommand :: Maybe ChoiceString
   , verbPast :: Maybe ChoiceString
   , verbStem :: Maybe ChoiceString
+  , verbFuture :: Maybe ChoiceString
+  , verbFutureAdhu :: Maybe ChoiceString
+  , verbInfinitiveRoot :: Maybe ChoiceString
+  , verbRespectfulCommand :: Maybe ChoiceString
   , verbClass :: VerbClass }
 
 instance Eq Verb where
@@ -79,9 +82,12 @@ defaultVerb = Verb
   , verbPrefix = ""
   , verbDefinitions = []
   , verbDefective = False
-  , verbRespectfulCommand = Nothing
   , verbPast = Nothing
   , verbStem = Nothing
+  , verbFuture = Nothing
+  , verbFutureAdhu = Nothing
+  , verbInfinitiveRoot = Nothing
+  , verbRespectfulCommand = Nothing
   , verbClass = undefined }
 
 getRoot :: Verb -> ChoiceString
@@ -89,11 +95,14 @@ getRoot verb =
   let root = verbRoot verb in
   case (verbClass verb, getEnding root) of
     (Class2 Weak, RLike) ->
-      ChoiceString [root] [] [root `append` "u"]
+      ChoiceString [root] [root `append` "u"]
     (Class3, LongVowel) ->
-      ChoiceString [root] [] [root `append` "gu"]
+      ChoiceString [root] [root `append` "gu"]
     _ ->
-      best root
+      if endsInDoublingConsonant root then
+        ChoiceString [root] [suffix root "u"]
+      else
+        common root
 
 getStrength :: Verb -> Strength
 getStrength verb =
@@ -121,8 +130,8 @@ addVerb basicVerb VerbList { allVerbs, byRoot, byDefinition } = VerbList
   where
     v = basicVerb { verbDefinitions = map stripTo $ verbDefinitions basicVerb }
 
-    insertAll (ChoiceString b c o) m =
-      foldr insertVerb m $ b ++ c ++ o
+    insertAll cs m =
+      foldr insertVerb m $ allChoices cs
 
     insertVerb :: (Eq k, Hashable k) => k -> HashMap k [Verb] -> HashMap k [Verb]
     insertVerb = HashMap.alter \case

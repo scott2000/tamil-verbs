@@ -43,13 +43,25 @@ instance Show TenseRequest where
     TRFuture   -> "future"
     TRHabitual -> "habitual"
 
+data TamilOrLatin
+  = TRTamil
+  | TRLatin
+  deriving Eq
+
+instance Show TamilOrLatin where
+  show = \case
+    TRTamil -> "tamil"
+    TRLatin -> "latin"
+
 data ConjugationRequest = ConjugationRequest
   { crNegative :: Bool
   , crRespectful :: Bool
   , crType :: Maybe TypeRequest
   , crTense :: Maybe TenseRequest
   , crSubject :: Maybe Subject
+  , crFormat :: Maybe TamilOrLatin
   , crGuess :: Bool
+  , crAlt :: Bool
   , crError :: Bool }
 
 getConjugations :: Verb -> ConjugationRequest -> [Conjugation]
@@ -80,7 +92,7 @@ getConjugations verb cr =
         Just subject ->
           subject
         Nothing
-          | defective -> Irrational Adhu
+          | defective -> Third $ Irrational Adhu
           | otherwise -> Naan
     parseNegative =
       case crType cr of
@@ -91,7 +103,7 @@ getConjugations verb cr =
         Just TRAdverb ->
           [Negative NegativeAdverb]
         Just TRInfinitive ->
-          [Infinitive]
+          [Negative NegativePastPresent]
         Just TRCommand ->
           [Negative $ NegativeCommand False]
         Nothing ->
@@ -114,9 +126,14 @@ getConjugations verb cr =
           [Infinitive]
         Just TRCommand ->
           [Positive $ Command False]
-        Nothing ->
-          map (\tense -> Positive $ Finite tense subject) tenses
+        Nothing
+          | not defective, Nothing <- crTense cr, Nothing <- crSubject cr ->
+            finite ++ [Positive Adverb, Infinitive]
+          | otherwise ->
+            finite
       where
+        finite =
+          map (\tense -> Positive $ Finite tense subject) tenses
         tenses =
           case crTense cr of
             Just TRPast -> [Past]
@@ -136,7 +153,9 @@ parseConjugationRequest parts = do
       , crType = Nothing
       , crTense = Nothing
       , crSubject = Nothing
+      , crFormat = Nothing
       , crGuess = False
+      , crAlt = False
       , crError = False }
   request <- foldM go defaultRequest parts
   case request of
@@ -161,6 +180,10 @@ parseConjugationRequest parts = do
           return cr { crRespectful = True }
         "guess" ->
           return cr { crGuess = True }
+        "alternatives" ->
+          return cr { crAlt = True }
+        "alternative" ->
+          return cr { crAlt = True }
         "adjective" ->
           updateType TRAdjective
         "noun" ->
@@ -179,10 +202,18 @@ parseConjugationRequest parts = do
           updateTense TRFuture
         "habitual" ->
           updateTense TRHabitual
+        "tamil" ->
+          updateFormat TRTamil
+        "latin" ->
+          updateFormat TRLatin
+        "english" ->
+          updateFormat TRLatin
         "neg" ->
           return cr { crNegative = True }
         "res" ->
           return cr { crRespectful = True }
+        "alt" ->
+          return cr { crAlt = True }
         "adj" ->
           updateType TRAdjective
         "adv" ->
@@ -197,6 +228,12 @@ parseConjugationRequest parts = do
           updateTense TRFuture
         "hab" ->
           updateTense TRHabitual
+        "tam" ->
+          updateFormat TRTamil
+        "lat" ->
+          updateFormat TRLatin
+        "eng" ->
+          updateFormat TRLatin
         "g" ->
           return cr { crGuess = True }
         "j" ->
@@ -237,6 +274,7 @@ parseConjugationRequest parts = do
       where
         updateType = update crType \crType -> cr { crType }
         updateTense = update crTense \crTense -> cr { crTense }
+        updateFormat = update crFormat \crFormat -> cr { crFormat }
         updateSubject = update crSubject \crSubject -> cr { crSubject }
         update get put new = do
           case get cr of
@@ -248,16 +286,14 @@ parseConjugationRequest parts = do
 
 guess :: VerbList -> TamilString -> [(String, Verb)]
 guess verbList basicRoot =
-  checkFor irregularVerbs $ checkFor verbList $
+  checkFor verbList $ checkFor irregularVerbs $
     case reducedStr of
       -- These are very hard to guess due to adding euphonic U
-      Vowel (U Short) : Consonant (Medium LAlveolar)  : _ -> []
-      Vowel (U Short) : Consonant (Medium R)          : _ -> []
-      Vowel (U Short) : Consonant (Medium LRetroflex) : _ -> []
-      Vowel (U Short) : Consonant (Soft NRetroflex)   : _ -> []
-      Vowel (U Short) : Consonant (Soft NAlveolar)    : _ -> []
+      Vowel (U Short) : Consonant (Medium _) : _ -> []
       Consonant (Medium Y) : _ ->
         [basicClass $ Class1 Weak]
+      Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
+        [basicClass $ Class1 Strong]
       _
         | isShort ->
           case reducedStr of
@@ -289,7 +325,9 @@ guess verbList basicRoot =
     reducedRoot = TamilString reducedStr
     reducedStr =
       case untamil basicRoot of
-        Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortVowel v -> rest
+        Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortishVowel v -> rest
+        Vowel (U Short) : Consonant c : rest@(Consonant o : _) | c == o, mayDouble c -> rest
+        Vowel (U Short) : rest@(Consonant c : _) | mayDouble c -> rest
         str -> str
     checkFor verbList other =
       case go $ sortOn (\(TamilString root, _) -> -(length root)) $ HashMap.toList $ byRoot verbList of
@@ -297,7 +335,7 @@ guess verbList basicRoot =
         verbs -> verbs
     go [] = []
     go ((root, verbs):rest) =
-      case stripSuffix root reducedRoot of
+      case stripSuffix root basicRoot of
         Nothing -> go rest
         Just rootPrefix ->
           let
@@ -317,10 +355,6 @@ guess verbList basicRoot =
           { verbRoot = reducedRoot
           , verbDefective = True
           , verbClass = Class2 Weak } )
-    isShortishVowel = \case
-      Ai -> True
-      Au -> True
-      v  -> isShortVowel v
     isShort =
       case reducedStr of
         [Consonant _, Vowel v] ->
@@ -380,23 +414,34 @@ processRequest :: String -> String -> IO ()
 processRequest verb conjugation = do
   let word = stripTo $ unwords $ splitHyphen verb
   request <- parseConjugationRequest $ splitHyphen conjugation
+  let
+    showTamil =
+      case crFormat request of
+        Nothing -> show
+        Just TRTamil -> toTamil
+        Just TRLatin -> toLatin
+    showChoices =
+      if crAlt request then
+        showUsing showTamil
+      else
+        showUsing showTamil . hide
   when (not $ crError request)
     case lookupVerb defaultVerbList (crGuess request) word of
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
       Right [(_, verb)] ->
         forM_ (getConjugations verb request) \conjugation ->
-          putStrLn $ show $ conjugate conjugation verb
+          putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
         forM_ verbs \(header, verb) ->
           case getConjugations verb request of
             [] -> return ()
             [conjugation] ->
-              putStrLn $ header ++ ": " ++ show (conjugate conjugation verb)
+              putStrLn $ header ++ ": " ++ showChoices (conjugate conjugation verb)
             conjugations -> do
               putStrLn $ header ++ ":"
               forM_ conjugations \conjugation ->
-                putStrLn $ "  " ++ show (conjugate conjugation verb)
+                putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
 splitHyphen :: String -> [String]
 splitHyphen s =
@@ -425,19 +470,10 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       { verbRoot = "azhu"
       , verbClass = Class1 Weak }
   , defaultVerb
-      { verbRoot = "kEL"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "El"
-      , verbClass = Class1 Strong }
-  , defaultVerb
       { verbRoot = "kal"
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "vil"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "thOl"
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "eDu"
@@ -451,24 +487,34 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "thaa"
-      , verbRespectfulCommand = Just "thaarungaL"
       , verbPast = Just "thandh"
       , verbStem = Just "tharu"
+      , verbRespectfulCommand = Just "thaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
-      , verbRespectfulCommand = Just "vaarungaL"
       , verbPast = Just "vandh"
       , verbStem = Just "varu"
+      , verbRespectfulCommand = Just "vaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "pOdhu"
       , verbDefective = True
-      , verbPast = Just $ ChoiceString ["pOndh"] ["pOrndh"] []
+      , verbPast = Just $ ChoiceString ["pOndh", "pOrndh"] []
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "kaaN"
       , verbPast = Just "kaND"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "en"
+      , verbInfinitiveRoot = Just $ ChoiceString ["enn"] ["enu"]
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "agal"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "neeL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "nil"
@@ -484,6 +530,10 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class3 }
   , defaultVerb
       { verbRoot = "sol"
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "vaar"
+      , verbStem = Just "vaaru"
       , verbClass = Class3 } ]
 
 defaultVerbList :: VerbList
@@ -546,16 +596,16 @@ defaultVerbList = foldl' (flip addVerb) emptyVerbList
   , defaultVerb
       { verbRoot = "thaa"
       , verbDefinitions = ["give"]
-      , verbRespectfulCommand = Just "thaarungaL"
       , verbPast = Just "thandh"
       , verbStem = Just "tharu"
+      , verbRespectfulCommand = Just "thaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
       , verbDefinitions = ["come"]
-      , verbRespectfulCommand = Just "vaarungaL"
       , verbPast = Just "vandh"
       , verbStem = Just "varu"
+      , verbRespectfulCommand = Just "vaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "koL"
