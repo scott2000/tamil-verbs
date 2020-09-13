@@ -34,6 +34,15 @@ main = do
         [] -> return ()
         (":load":filePath) ->
           loadVerbList (unwords filePath) >>= startInteractive
+        (":reset":_) ->
+          startInteractive defaultVerbList
+        (":quit":_) -> return ()
+        (":q":_) -> return ()
+        (":":_) ->
+          startInteractive verbList
+        ((':':command):_) -> do
+          putStrLn $ "unknown command :" ++ command ++ "\n"
+          startInteractive verbList
         (verb:conjugation) -> do
           processRequest verbList verb $ unwords conjugation
           putStrLn ""
