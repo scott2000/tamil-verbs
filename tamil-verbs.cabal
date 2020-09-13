@@ -26,6 +26,7 @@ executable tamil-verbs
   default-extensions:  LambdaCase,
                        PatternSynonyms,
                        NamedFieldPuns,
+                       RecordWildCards,
                        OverloadedStrings,
                        BlockArguments,
                        DeriveFunctor,

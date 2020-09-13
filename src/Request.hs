@@ -258,7 +258,12 @@ parseConjugationRequest parts = do
               Left _ -> Nothing
               Right subject ->
                 let
-                  normalized = normalize subject
+                  normalized =
+                    case normalize subject of
+                      TamilString str | last str == Vowel (I Short) ->
+                        -- Replace idhu and edhu with adhu
+                        TamilString $ init str ++ [Vowel (A Short)]
+                      other -> other
                   findSubject [] = Nothing
                   findSubject (s:ss)
                     | normalize (tamilShow s) == normalized = Just s
@@ -284,45 +289,105 @@ parseConjugationRequest parts = do
               return ()
           return $ put $ Just new
 
-guess :: VerbList -> TamilString -> [(String, Verb)]
-guess verbList basicRoot =
-  checkFor verbList $ checkFor irregularVerbs $
-    case reducedStr of
-      -- These are very hard to guess due to adding euphonic U
-      Vowel (U Short) : Consonant (Medium _) : _ -> []
-      Consonant (Medium Y) : _ ->
-        [basicClass $ Class1 Weak]
-      Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
-        [basicClass $ Class1 Strong]
-      _
-        | isShort ->
-          case reducedStr of
-            Vowel (U Short) : Consonant (Hard K) : Vowel _ : _ ->
-              [basicClass $ Class1 Weak]
-            Vowel (U Short) : Consonant (Hard TRetroflex) : Vowel _ : _ ->
-              [basicClass $ Class1 Weak]
-            Vowel (U Short) : Consonant (Hard RAlveolar) : Vowel _ : _ ->
-              [basicClass $ Class1 Weak]
-            Consonant _ : _ ->
-              [basicClass $ Class2 Weak]
-            Vowel (A Short) : _ ->
-              [basicClass $ Class2 Strong]
-            Vowel (I Short) : Consonant (Medium R) : _ ->
-              [defective2W]
-            _ ->
-              [basicClass $ Class1 Strong, defective2W]
-        | otherwise ->
-          case reducedStr of
-            Vowel (U Short) : Consonant (Hard TRetroflex) : Vowel (I Short) : _ ->
-              [basicClass $ Class1 Weak]
-            Vowel (U Short) : _ ->
-              [basicClass Class3]
-            Vowel v : _ | not $ isShortishVowel v ->
-              [basicClass Class3]
-            _ ->
-              [basicClass $ Class2 Weak]
+guessNoInfo :: [TamilLetter] -> [(String, Verb)]
+guessNoInfo str =
+  case reducedStr of
+    -- These are very hard to guess due to adding euphonic U
+    Vowel (U Short) : Consonant (Medium _) : _ -> []
+    Consonant (Medium Y) : _ ->
+      [basicClass $ Class1 Weak]
+    Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
+      [basicClass $ Class1 Strong]
+    _
+      | isShort ->
+        case reducedStr of
+          Vowel (U Short) : Consonant (Hard K) : Vowel _ : _ ->
+            [basicClass $ Class1 Weak]
+          Vowel (U Short) : Consonant (Hard TRetroflex) : Vowel _ : _ ->
+            [basicClass $ Class1 Weak]
+          Vowel (U Short) : Consonant (Hard RAlveolar) : Vowel _ : _ ->
+            [basicClass $ Class1 Weak]
+          Consonant _ : _ ->
+            [basicClass $ Class2 Weak]
+          Vowel (A Short) : _ ->
+            [basicClass $ Class2 Strong]
+          Vowel (I Short) : Consonant (Medium R) : _ ->
+            [defective2W]
+          _ ->
+            [basicClass $ Class1 Strong, defective2W]
+      | otherwise ->
+        case reducedStr of
+          Vowel (U Short) : Consonant (Hard TRetroflex) : Vowel (I Short) : _ ->
+            [basicClass $ Class1 Weak]
+          Vowel (U Short) : _ ->
+            [basicClass Class3]
+          Vowel v : _ | not $ isShortishVowel v ->
+            [basicClass Class3]
+          _ ->
+            [basicClass $ Class2 Weak]
   where
     reducedRoot = TamilString reducedStr
+    prefixRoot = TamilString prefixStr
+    (reducedStr, prefixStr) =
+      let unsplit = (str, []) in
+      case
+        case str of
+          Consonant c1 : Vowel v : Consonant c2 : prefix ->
+            Just (c2, ([Consonant c1, Vowel v, Consonant c2], prefix))
+          Vowel v1 : Consonant c1 : Vowel v2 : Consonant c2 : prefix ->
+            Just (c2, ([Vowel v1, Consonant c1, Vowel v2, Consonant c2], prefix))
+          _ ->
+            Nothing
+      of
+        Nothing -> unsplit
+        Just (firstConsonant, split@(_, prefix)) ->
+          case firstConsonant of
+            Hard h ->
+              case prefix of
+                Consonant (Hard h') : rest | h' == h ->
+                  -- Make sure hard consonant was correctly doubled if it was doubled
+                  case rest of
+                    Vowel (I Short) : Consonant _ : _ -> split
+                    Vowel (U Short) : Consonant x : Consonant y : _ | x == y -> split
+                    _ -> unsplit
+                Vowel (U Short) : Consonant (Hard x) : Consonant (Hard y) : _ | x == y -> unsplit
+                Vowel (U Short) : Consonant _ : _ -> split
+                _ -> unsplit
+            _ ->
+              case prefix of
+                Vowel (I Short) : Consonant _ : _ -> split
+                Vowel (U Short) : Consonant _ : _ -> split
+                _ -> unsplit
+    basicClass c =
+      ( show c
+      , defaultVerb
+        { verbRoot = reducedRoot
+        , verbPrefix = prefixRoot
+        , verbClass = c } )
+    defective2W =
+      ( show $ Class2 Weak
+      , defaultVerb
+          { verbRoot = reducedRoot
+          , verbPrefix = prefixRoot
+          , verbDefective = True
+          , verbClass = Class2 Weak } )
+    isShort =
+      case reducedStr of
+        [Consonant _, Vowel v] ->
+          isShortishVowel v
+        [Consonant _, Vowel v, Consonant _] ->
+          isShortishVowel v
+        [Vowel v0, Consonant _, Vowel v1] ->
+          isShortishVowel v0 && isShortishVowel v1
+        [Vowel v0, Consonant _, Vowel v1, Consonant _] ->
+          isShortishVowel v0 && isShortishVowel v1
+        _ ->
+          False
+
+guess :: VerbList -> TamilString -> [(String, Verb)]
+guess verbList basicRoot =
+  checkFor verbList $ checkFor irregularVerbs $ guessNoInfo reducedStr
+  where
     reducedStr =
       case untamil basicRoot of
         Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortishVowel v -> rest
@@ -344,29 +409,6 @@ guess verbList basicRoot =
               , v { verbPrefix = rootPrefix `append` verbPrefix v } )
           in
             map updateVerb verbs
-    basicClass c =
-      ( show c
-      , defaultVerb
-        { verbRoot = reducedRoot
-        , verbClass = c } )
-    defective2W =
-      ( show $ Class2 Weak
-      , defaultVerb
-          { verbRoot = reducedRoot
-          , verbDefective = True
-          , verbClass = Class2 Weak } )
-    isShort =
-      case reducedStr of
-        [Consonant _, Vowel v] ->
-          isShortishVowel v
-        [Consonant _, Vowel v, Consonant _] ->
-          isShortishVowel v
-        [Vowel v0, Consonant _, Vowel v1] ->
-          isShortishVowel v0 && isShortishVowel v1
-        [Vowel v0, Consonant _, Vowel v1, Consonant _] ->
-          isShortishVowel v0 && isShortishVowel v1
-        _ ->
-          False
 
 lookupVerb :: VerbList -> Bool -> String -> Either String [(String, Verb)]
 lookupVerb verbList allowGuess word =

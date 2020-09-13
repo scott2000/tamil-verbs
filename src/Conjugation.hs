@@ -56,6 +56,7 @@ data Subject
   | Naam
   | Naangal
   | Nee
+  | Neer
   | Neengal
   | Third ThirdPersonSubject
   deriving Eq
@@ -66,6 +67,7 @@ instance TamilShow Subject where
     Naam    -> "naam"
     Naangal -> "naangaL"
     Nee     -> "nee"
+    Neer    -> "neer"
     Neengal -> "neengaL"
     Third t -> tamilShow t
 
@@ -75,7 +77,7 @@ instance Show Subject where
 allSubjects :: [Subject]
 allSubjects =
   [ Naan, Naam, Naangal
-  , Nee, Neengal ]
+  , Nee, Neer, Neengal ]
   ++ map Third allThirdPersonSubjects
 
 simpleSuffix :: Subject -> TamilString
@@ -84,6 +86,7 @@ simpleSuffix = \case
   Naam                    -> "Om"
   Naangal                 -> "Om"
   Nee                     -> "aay"
+  Neer                    -> "eer"
   Neengal                 -> "eergaL"
   Third Avan              -> "aan"
   Third Aval              -> "aaL"
@@ -118,17 +121,19 @@ getPast verb =
       case (verbClass verb, getEnding root) of
         (Class1 Weak, HardAndU h) ->
           common $ replaceLastLetter root $ TamilString [Consonant $ Hard h, Consonant $ Hard h]
-        (Class1 _, Retroflex L) ->
-          common $ replaceLastLetter root "TT"
-        (Class1 _, Alveolar L) ->
-          common $ replaceLastLetter root "RR"
         (Class1 Weak, _) ->
           common $ suffix root "dh"
+        (Class1 Strong, Retroflex L) ->
+          common $ replaceLastLetter root "TT"
+        (Class1 Strong, Alveolar L) ->
+          common $ replaceLastLetter root "RR"
         (Class1 Strong, _) ->
           common $ suffix root "tt"
-        (Class2 _, Retroflex _) ->
+        (Class2 Weak, Retroflex _) ->
           common $ replaceLastLetter root "NT"
-        (Class2 _, Alveolar _) ->
+        (Class2 Weak, Alveolar _) ->
+          common $ replaceLastLetter root "ndR"
+        (Class2 Strong, Alveolar L) ->
           common $ replaceLastLetter root "ndR"
         (Class2 _, _) ->
           common $ suffix root "ndh"
@@ -330,7 +335,7 @@ getStem verb =
         Strong ->
           let root = verbRoot verb in
           case getEnding root of
-            Retroflex L ->
+            Retroflex L | Class1 _ <- verbClass verb ->
               common $ replaceLastLetter root "T"
             Alveolar L ->
               common $ replaceLastLetter root "R"

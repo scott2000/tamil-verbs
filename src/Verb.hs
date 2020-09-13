@@ -122,7 +122,7 @@ parseVerb s =
             Right verb { verbDefinitions }
       foldM addFlag verb $ map words flags
     _ ->
-      Left ""
+      Left "missing definition for verb"
   where
     getRootInfo class_ prefix root = do
       verbClass <- parseClass class_
@@ -171,8 +171,6 @@ parseAllVerbs file =
               case parseVerb line of
                 Right verb ->
                   go rest n' errs (verb:verbs)
-                Left "" ->
-                  go rest n' errs verbs
                 Left e ->
                   let err = "syntax error in line " ++ show n ++ ": " ++ e in
                   go rest n' (err:errs) verbs
@@ -199,6 +197,28 @@ instance Ord Verb where
   a `compare` b =
     verbClass a `compare` verbClass b
     <> verbRoot a `compare` verbRoot b
+
+instance Show Verb where
+  show Verb { .. } =
+    show verbClass ++ " " ++ maybePrefix ++ toLatin verbRoot ++ ". " ++ intercalate ", " verbDefinitions ++ flags
+    where
+      maybePrefix =
+        case verbPrefix of
+          TamilString [] -> ""
+          _              -> toLatin verbPrefix ++ " "
+      addFlag _ False s = s
+      addFlag f True s = ". " ++ f ++ s
+      addKey _ Nothing s = s
+      addKey k (Just c) s = ". " ++ k ++ " " ++ showUsing toLatin c ++ s
+      flags =
+        addFlag "defect" verbDefective $
+        addKey "past" verbPast $
+        addKey "stem" verbStem $
+        addKey "future" verbFuture $
+        addKey "adhu" verbFutureAdhu $
+        addKey "inf" verbInfinitiveRoot $
+        addKey "resp" verbRespectfulCommand $
+        ""
 
 defaultVerb :: Verb
 defaultVerb = Verb
@@ -343,7 +363,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "koL"
-      , verbDefinitions = ["have"]
+      , verbDefinitions = ["have", "hold"]
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "kol"
