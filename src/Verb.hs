@@ -2,16 +2,21 @@ module Verb where
 
 import TamilString
 
+import Control.Monad
+
+import Data.List
 import Data.Hashable
 
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 
+data NorL = N | L
+
 data VerbEnding
   = HardAndU Vallinam
   | LongVowel
-  | Retroflex
-  | Alveolar
+  | Retroflex NorL
+  | Alveolar NorL
   | RLike
   | OtherEnding
 
@@ -20,10 +25,10 @@ getEnding (TamilString str) =
   case str of
     Consonant c : Vowel _ : _ ->
       case c of
-        Soft   NRetroflex -> Retroflex
-        Soft   NAlveolar  -> Alveolar
-        Medium LRetroflex -> Retroflex
-        Medium LAlveolar  -> Alveolar
+        Soft   NRetroflex -> Retroflex N
+        Soft   NAlveolar  -> Alveolar  N
+        Medium LRetroflex -> Retroflex L
+        Medium LAlveolar  -> Alveolar  L
         Medium R          -> RLike
         Medium Zh         -> RLike
         _                 -> OtherEnding
@@ -53,9 +58,128 @@ instance Show VerbClass where
     Class2 Strong -> "2S"
     Class3        -> "3"
 
+-- CLASS [PREFIX] ROOT. (DEFINITION),+ (. FLAG)*
+-- 2W koNDu vaa. bring. past vandh. stem varu. res vaarungaL
+
+parseClass :: String -> Either String VerbClass
+parseClass = \case
+  '1' : s -> Class1 <$> parseStrength s
+  '2' : s -> Class2 <$> parseStrength s
+  "3"     -> Right Class3
+  "3W"    -> Left "expected 3 instead of 3W"
+  "3S"    -> Left "class 3 cannot be strong"
+  _       -> Left "expected 1, 2, or 3 for class"
+  where
+    parseStrength = \case
+      "W" -> Right Weak
+      "S" -> Right Strong
+      _   -> Left "expected W or S for strength"
+
+parseTamil' :: String -> Either String TamilString
+parseTamil' s =
+  case parseTamil s of
+    Left err ->
+      Left $ show err
+    Right tamil ->
+      Right tamil
+
+parseTamilNonEmpty :: String -> Either String TamilString
+parseTamilNonEmpty s =
+  case parseTamil' s of
+    Right (TamilString []) ->
+      Left "word cannot be empty"
+    other -> other
+
+parseChoiceString :: String -> Either String ChoiceString
+parseChoiceString s =
+  case map (split ',') $ split ';' s of
+    [c] ->
+      (`ChoiceString` []) <$> getTamil c
+    [c, o] ->
+      ChoiceString <$> getTamil c <*> getTamil o
+    _ ->
+      Left "expected either 1 or 2 sets of choices"
+  where
+    getTamil = traverse parseTamilNonEmpty
+
+parseVerb :: String -> Either String Verb
+parseVerb s =
+  case split '.' s of
+    rootInfo : definitions : flags -> do
+      verb <-
+        case words rootInfo of
+          [class_, root] ->
+            getRootInfo class_ "" root
+          [class_, prefix, root] ->
+            getRootInfo class_ prefix root
+          _ ->
+            Left "expected 'CLASS [PREFIX] ROOT' for first section of verb"
+      verb <-
+        case map (stripTo . unwords . words) $ split ',' definitions of
+          [] ->
+            Left "expected at least one definition in second section of verb"
+          verbDefinitions ->
+            Right verb { verbDefinitions }
+      foldM addFlag verb $ map words flags
+    _ ->
+      Left ""
+  where
+    getRootInfo class_ prefix root = do
+      verbClass <- parseClass class_
+      verbPrefix <- parseTamil' prefix
+      verbRoot <- parseTamilNonEmpty root
+      return defaultVerb { verbClass, verbPrefix, verbRoot }
+    addFlag verb ["defect"]
+      | verbDefective verb = Left "verb already marked defective"
+      | otherwise          = Right verb { verbDefective = True }
+    addFlag _ [flag] =
+      Left $ "invalid flag for verb: " ++ flag
+    addFlag verb (key : strParts) = do
+      choiceStr <- parseChoiceString $ concat strParts
+      (old, verb) <-
+        case key of
+          "past"   -> Right (verbPast verb, verb { verbPast = Just choiceStr })
+          "stem"   -> Right (verbStem verb, verb { verbStem = Just choiceStr })
+          "future" -> Right (verbFuture verb, verb { verbFuture = Just choiceStr })
+          "adhu"   -> Right (verbFutureAdhu verb, verb { verbFutureAdhu = Just choiceStr })
+          "inf"    -> Right (verbInfinitiveRoot verb, verb { verbInfinitiveRoot = Just choiceStr })
+          "resp"   -> Right (verbRespectfulCommand verb, verb { verbRespectfulCommand = Just choiceStr })
+          _        -> Left $ "invalid key: " ++ key
+      case old of
+        Nothing ->
+          Right verb
+        Just _ ->
+          Left $ "duplicate entry for `" ++ key ++ "`"
+    addFlag _ _ =
+      Left "verb flag cannot be empty"
+
+parseAllVerbs :: String -> ([String], VerbList)
+parseAllVerbs file =
+  go (lines file) (1 :: Int) [] []
+  where
+    go lines n errs verbs =
+      case lines of
+        [] -> (errs, makeVerbList verbs)
+        line:rest ->
+          let n' = n + 1 in
+          case line of
+            "" ->
+              go rest n' errs verbs
+            '#':_ ->
+              go rest n' errs verbs
+            _ ->
+              case parseVerb line of
+                Right verb ->
+                  go rest n' errs (verb:verbs)
+                Left "" ->
+                  go rest n' errs verbs
+                Left e ->
+                  let err = "syntax error in line " ++ show n ++ ": " ++ e in
+                  go rest n' (err:errs) verbs
+
 data Verb = Verb
   { verbRoot :: TamilString
-  , verbPrefix :: ChoiceString
+  , verbPrefix :: TamilString
   , verbDefinitions :: [String]
   , verbDefective :: Bool
   , verbPast :: Maybe ChoiceString
@@ -125,7 +249,7 @@ emptyVerbList = VerbList
 addVerb :: Verb -> VerbList -> VerbList
 addVerb basicVerb VerbList { allVerbs, byRoot, byDefinition } = VerbList
   { allVerbs = v : allVerbs
-  , byRoot = insertAll (verbPrefix v |+| getRoot v) byRoot
+  , byRoot = insertAll (common (verbPrefix v) |+| getRoot v) byRoot
   , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
   where
     v = basicVerb { verbDefinitions = map stripTo $ verbDefinitions basicVerb }
@@ -142,4 +266,178 @@ stripTo :: String -> String
 stripTo (' ' : s) = stripTo s
 stripTo ('t' : 'o' : ' ' : s) = stripTo s
 stripTo other = other
+
+makeVerbList :: [Verb] -> VerbList
+makeVerbList = foldl' (flip addVerb) emptyVerbList
+
+defaultVerbList :: VerbList
+defaultVerbList = makeVerbList
+  [ -- Class 1 Weak
+    defaultVerb
+      { verbRoot = "saappiDu"
+      , verbDefinitions = ["eat"]
+      , verbClass = Class1 Weak }
+  , defaultVerb
+      { verbRoot = "pODu"
+      , verbDefinitions = ["drop", "place"]
+      , verbClass = Class1 Weak }
+  , defaultVerb
+      { verbRoot = "viDu"
+      , verbDefinitions = ["let go", "release"]
+      , verbClass = Class1 Weak }
+  , defaultVerb
+      { verbRoot = "sey"
+      , verbDefinitions = ["do", "make"]
+      , verbClass = Class1 Weak }
+    -- Class 1 Strong
+  , defaultVerb
+      { verbRoot = "kEL"
+      , verbDefinitions = ["ask", "listen", "hear"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "eDu"
+      , verbDefinitions = ["take", "get"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "kuDi"
+      , verbDefinitions = ["drink"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "koDu"
+      , verbDefinitions = ["give"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "paDi"
+      , verbDefinitions = ["study", "read"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "paDu"
+      , verbDefinitions = ["lie down"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "paar"
+      , verbDefinitions = ["look", "see"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "muDi"
+      , verbDefinitions = ["finish"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "uDai"
+      , verbDefinitions = ["break"]
+      , verbClass = Class1 Strong }
+    -- Class 2 Weak
+  , defaultVerb
+      { verbRoot = "thaa"
+      , verbDefinitions = ["give"]
+      , verbPast = Just "thandh"
+      , verbStem = Just "tharu"
+      , verbRespectfulCommand = Just "thaarungaL"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "vaa"
+      , verbDefinitions = ["come"]
+      , verbPast = Just "vandh"
+      , verbStem = Just "varu"
+      , verbRespectfulCommand = Just "vaarungaL"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "koL"
+      , verbDefinitions = ["have"]
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "kol"
+      , verbDefinitions = ["kill"]
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "chel"
+      , verbDefinitions = ["go"]
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "muDi"
+      , verbDefinitions = ["be finished"]
+      , verbDefective = True
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "uDai"
+      , verbDefinitions = ["be broken"]
+      , verbDefective = True
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "teri"
+      , verbDefinitions = ["be known"]
+      , verbDefective = True
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "puri"
+      , verbDefinitions = ["be understood"]
+      , verbDefective = True
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "uTkaar"
+      , verbDefinitions = ["sit"]
+      , verbClass = Class2 Weak }
+    -- Class 2 Strong
+  , defaultVerb
+      { verbRoot = "nil"
+      , verbDefinitions = ["stop", "stand"]
+      , verbClass = Class2 Strong }
+  , defaultVerb
+      { verbRoot = "naDa"
+      , verbDefinitions = ["walk", "happen"]
+      , verbClass = Class2 Strong }
+  , defaultVerb
+      { verbRoot = "paRa"
+      , verbDefinitions = ["fly"]
+      , verbClass = Class2 Strong }
+  , defaultVerb
+      { verbRoot = "maRa"
+      , verbDefinitions = ["forget"]
+      , verbClass = Class2 Strong }
+  , defaultVerb
+      { verbRoot = "iru"
+      , verbDefinitions = ["be", "stay"]
+      , verbClass = Class2 Strong }
+    -- Class 3
+  , defaultVerb
+      { verbRoot = "aa"
+      , verbDefinitions = ["become", "happen", "be done"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "pO"
+      , verbDefinitions = ["go", "leave"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "sol"
+      , verbDefinitions = ["say", "tell"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "ODu"
+      , verbDefinitions = ["run"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "thoongu"
+      , verbDefinitions = ["sleep"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "tirumbu"
+      , verbDefinitions = ["turn around", "return"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "paaDu"
+      , verbDefinitions = ["sing"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "pEsu"
+      , verbDefinitions = ["speak", "talk"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "veTTu"
+      , verbDefinitions = ["cut"]
+      , verbClass = Class3 }
+  , defaultVerb
+      { verbRoot = "vaangu"
+      , verbDefinitions = ["buy"]
+      , verbClass = Class3 }
+  ]
 

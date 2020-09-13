@@ -1,0 +1,75 @@
+# Class 1 Weak
+1W saappiDu. eat
+1W kooppiDu. call
+1W peRu. receive, obtain
+1W pODu. drop, place
+1W viDu. let go, release
+1W azhu. cry
+1W sey. do, make
+1W pey. pour
+
+# Class 1 Strong
+1S kal. learn
+1S vil. sell, be sold
+1S kEL. ask, listen, hear
+1S izhu. pull
+1S eDu. take, get
+1S kaDi. bite
+1S kuDi. drink
+1S kudhi. jump
+1S kuLi. bathe, shower, take a bath, take a shower
+1S koDu. give
+1S kiDai. be available
+1S paDi. study, read
+1S paDu. lie down
+1S piDi. hold, catch, be liked
+1S paar. look, see
+1S muDi. finish
+1S uDai. break
+
+# Class 2 Weak
+2W thaa. give. past thandh. stem tharu. resp thaarungaL
+2W vaa. come. past vandh. stem varu. resp vaarungaL
+2W pOdhu. be enough. defect. past pOndh, pOrndh
+2W en. say, quote. inf enn; enu
+2W kaaN. see. past kaND
+2W koL. have, hold
+2W kol. kill
+2W sel. go
+2W muDi. be finished. defect
+2W uDai. be broken. defect
+2W teri. be known. defect
+2W puri. be understood. defect
+2W uTkaar. sit
+
+# Class 2 Strong
+2S nil. stop, stand
+2S naDa. walk, happen
+2S paRa. fly
+2S maRa. forget
+2S iru. be, stay
+
+# Classs 3
+3 aa. become, happen, be done
+3 paNNu. make
+3 pO. go, leave
+3 sol. say, tell
+3 anuppu. send
+3 ODu. run
+3 OTTu. drive
+3 kazhuvu. wash
+3 thaLLu. push
+3 thoongu. sleep
+3 tiruDu. steal
+3 tirumbu. turn around, return
+3 nambu. believe, trust, hope
+3 paaDu. sing
+3 pEsu. speak, talk
+3 viLaiyaaDu. play
+3 veTTu. cut
+3 vaangu. buy
+3 vENDu. request, be wanted
+
+# Compound verbs
+2W koNDu vaa. bring. past vandh. stem varu. resp vaarungaL
+2W purindhu koL. understand

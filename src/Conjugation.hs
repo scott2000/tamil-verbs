@@ -118,17 +118,17 @@ getPast verb =
       case (verbClass verb, getEnding root) of
         (Class1 Weak, HardAndU h) ->
           common $ replaceLastLetter root $ TamilString [Consonant $ Hard h, Consonant $ Hard h]
-        (Class1 _, Retroflex) ->
+        (Class1 _, Retroflex L) ->
           common $ replaceLastLetter root "TT"
-        (Class1 _, Alveolar) ->
+        (Class1 _, Alveolar L) ->
           common $ replaceLastLetter root "RR"
         (Class1 Weak, _) ->
           common $ suffix root "dh"
         (Class1 Strong, _) ->
           common $ suffix root "tt"
-        (Class2 _, Retroflex) ->
+        (Class2 _, Retroflex _) ->
           common $ replaceLastLetter root "NT"
-        (Class2 _, Alveolar) ->
+        (Class2 _, Alveolar _) ->
           common $ replaceLastLetter root "ndR"
         (Class2 _, _) ->
           common $ suffix root "ndh"
@@ -137,9 +137,7 @@ getPast verb =
           case ending of
             LongVowel ->
               ChoiceString [root `append` "n"] [basic, root `append` "gin"]
-            Retroflex ->
-              ChoiceString [replaceLastLetter root "NN"] [basic]
-            Alveolar ->
+            Alveolar L ->
               ChoiceString [replaceLastLetter root "nn"] [basic]
             _ ->
               common basic
@@ -332,9 +330,9 @@ getStem verb =
         Strong ->
           let root = verbRoot verb in
           case getEnding root of
-            Retroflex ->
+            Retroflex L ->
               common $ replaceLastLetter root "T"
-            Alveolar ->
+            Alveolar L ->
               common $ replaceLastLetter root "R"
             _ ->
               common root
@@ -366,11 +364,10 @@ conjugateFinite conjugation subject verb =
               Nothing
         isIrregular =
           case (verbPast verb, getEnding $ verbRoot verb) of
-            (Just _, _)    -> True
-            (_, LongVowel) -> True
-            (_, Retroflex) -> True
-            (_, Alveolar)  -> True
-            _              -> False
+            (Just _, _)     -> True
+            (_, LongVowel)  -> True
+            (_, Alveolar L) -> True
+            _               -> False
       in
         if isIrregular then
           promote nadhu <> promote yadhu <> promote yitru
@@ -468,7 +465,7 @@ data Conjugation
 
 conjugate :: Conjugation -> Verb -> ChoiceString
 conjugate conjugation verb =
-  verbPrefix verb |+|
+  common (verbPrefix verb) |+|
     case conjugation of
       Positive positive ->
         conjugatePositive positive verb

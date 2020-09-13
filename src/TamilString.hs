@@ -87,6 +87,17 @@ promote (ChoiceString [] (c:u)) =
   ChoiceString [c] u
 promote other = other
 
+splitWith :: (Char -> Bool) -> String -> [String]
+splitWith isBreak s =
+  case dropWhile isBreak s of
+    "" -> []
+    s' ->
+      let (w, s'') = break isBreak s' in
+      w : splitWith isBreak s''
+
+split :: Char -> String -> [String]
+split = splitWith . (==)
+
 data VowelLength
   = Short
   | Long
@@ -595,9 +606,10 @@ normalize =
   TamilString . map go . untamil
   where
     go = \case
+      Vowel (A _) -> Vowel $ A Short
       Vowel (U _) -> Vowel $ U Short
       Vowel (O _) -> Vowel $ U Short
-      Vowel _     -> Vowel $ A Short
+      Vowel _     -> Vowel $ I Short
       Consonant (Hard TRetroflex)   -> Consonant $ Hard TDental
       Consonant (Hard RAlveolar)    -> Consonant $ Medium R
       Consonant (Soft Ng)           -> Consonant $ Hard K

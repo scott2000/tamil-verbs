@@ -341,7 +341,7 @@ guess verbList basicRoot =
           let
             updateVerb v =
               ( show (verbClass v)
-              , v { verbPrefix = forChoice (verbPrefix v) \root -> rootPrefix `append` root } )
+              , v { verbPrefix = rootPrefix `append` verbPrefix v } )
           in
             map updateVerb verbs
     basicClass c =
@@ -410,8 +410,8 @@ lookupVerb verbList allowGuess word =
                         let showFunction = if all isAscii word then toLatin else toTamil in
                         " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
 
-processRequest :: String -> String -> IO ()
-processRequest verb conjugation = do
+processRequest :: VerbList -> String -> String -> IO ()
+processRequest verbList verb conjugation = do
   let word = stripTo $ unwords $ splitHyphen verb
   request <- parseConjugationRequest $ splitHyphen conjugation
   let
@@ -426,7 +426,7 @@ processRequest verb conjugation = do
       else
         showUsing showTamil . hide
   when (not $ crError request)
-    case lookupVerb defaultVerbList (crGuess request) word of
+    case lookupVerb verbList (crGuess request) word of
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
       Right [(_, verb)] ->
@@ -444,18 +444,11 @@ processRequest verb conjugation = do
                 putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
 splitHyphen :: String -> [String]
-splitHyphen s =
-  case dropWhile isBreak s of
-    "" -> []
-    s' ->
-      let (w, s'') = break isBreak s' in
-      w : splitHyphen s''
-  where
-    isBreak = \case
-      '-' -> True
-      ',' -> True
-      ' ' -> True
-      _   -> False
+splitHyphen = splitWith \case
+  '-' -> True
+  ',' -> True
+  ' ' -> True
+  _   -> False
 
 irregularVerbs :: VerbList
 irregularVerbs = foldl' (flip addVerb) emptyVerbList
@@ -538,199 +531,4 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       { verbRoot = "vaar"
       , verbStem = Just "vaaru"
       , verbClass = Class3 } ]
-
-defaultVerbList :: VerbList
-defaultVerbList = foldl' (flip addVerb) emptyVerbList
-  [ -- Common irregular verbs
-    defaultVerb
-      { verbRoot = "azhu"
-      , verbDefinitions = ["cry"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "kal"
-      , verbDefinitions = ["learn"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "pOdhu"
-      , verbDefinitions = ["be enough"]
-      , verbDefective = True
-      , verbPast = Just $ ChoiceString ["pOndh", "pOrndh"] []
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "kaaN"
-      , verbDefinitions = ["see"]
-      , verbPast = Just "kaND"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "aa"
-      , verbDefinitions = ["become", "happen", "be done"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "paNNu"
-      , verbDefinitions = ["make"]
-      , verbClass = Class3 }
-  , -- Class 1 Weak
-    defaultVerb
-      { verbRoot = "saappiDu"
-      , verbDefinitions = ["eat"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "pODu"
-      , verbDefinitions = ["drop", "place"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "viDu"
-      , verbDefinitions = ["let go", "release"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "sey"
-      , verbDefinitions = ["do", "make"]
-      , verbClass = Class1 Weak }
-    -- Class 1 Strong
-  , defaultVerb
-      { verbRoot = "kEL"
-      , verbDefinitions = ["ask", "listen", "hear"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "eDu"
-      , verbDefinitions = ["take", "get"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "kuDi"
-      , verbDefinitions = ["drink"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "koDu"
-      , verbDefinitions = ["give"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paDi"
-      , verbDefinitions = ["study", "read"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paDu"
-      , verbDefinitions = ["lie down"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paar"
-      , verbDefinitions = ["look", "see"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "muDi"
-      , verbDefinitions = ["finish"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "uDai"
-      , verbDefinitions = ["break"]
-      , verbClass = Class1 Strong }
-    -- Class 2 Weak
-  , defaultVerb
-      { verbRoot = "thaa"
-      , verbDefinitions = ["give"]
-      , verbPast = Just "thandh"
-      , verbStem = Just "tharu"
-      , verbRespectfulCommand = Just "thaarungaL"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "vaa"
-      , verbDefinitions = ["come"]
-      , verbPast = Just "vandh"
-      , verbStem = Just "varu"
-      , verbRespectfulCommand = Just "vaarungaL"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "koL"
-      , verbDefinitions = ["have"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "kol"
-      , verbDefinitions = ["kill"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "chel"
-      , verbDefinitions = ["go"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "muDi"
-      , verbDefinitions = ["be finished"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "uDai"
-      , verbDefinitions = ["be broken"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "teri"
-      , verbDefinitions = ["be known"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "puri"
-      , verbDefinitions = ["be understood"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "uTkaar"
-      , verbDefinitions = ["sit"]
-      , verbClass = Class2 Weak }
-    -- Class 2 Strong
-  , defaultVerb
-      { verbRoot = "nil"
-      , verbDefinitions = ["stop", "stand"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "naDa"
-      , verbDefinitions = ["walk", "happen"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "paRa"
-      , verbDefinitions = ["fly"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "maRa"
-      , verbDefinitions = ["forget"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "iru"
-      , verbDefinitions = ["be", "stay"]
-      , verbClass = Class2 Strong }
-    -- Class 3
-  , defaultVerb
-      { verbRoot = "pO"
-      , verbDefinitions = ["go", "leave"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "sol"
-      , verbDefinitions = ["say", "tell"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "ODu"
-      , verbDefinitions = ["run"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "thoongu"
-      , verbDefinitions = ["sleep"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "tirumbu"
-      , verbDefinitions = ["turn around", "return"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "paaDu"
-      , verbDefinitions = ["sing"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "pEsu"
-      , verbDefinitions = ["speak", "talk"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "veTTu"
-      , verbDefinitions = ["cut"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "vaangu"
-      , verbDefinitions = ["buy"]
-      , verbClass = Class3 }
-  ]
 
