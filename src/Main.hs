@@ -15,6 +15,10 @@ loadVerbList filePath = do
   mapM_ putStrLn errs
   return verbList
 
+exportVerbList :: FilePath -> VerbList -> IO ()
+exportVerbList filePath =
+  writeFile filePath . unlines . map show . sort . allVerbs
+
 main :: IO ()
 main = do
   verbList <-
@@ -40,6 +44,11 @@ main = do
           verbList <- loadVerbList path
           putStrLn $ "loaded '" ++ path ++ "' (" ++ count verbList ++ " verbs)"
           startInteractive verbList
+        (":export":pathParts) -> do
+          let path = unwords pathParts
+          exportVerbList path verbList
+          putStrLn $ "exported " ++ count verbList ++ " verbs to '" ++ path ++ "'"
+          startInteractive verbList
         (":add":verbParts) ->
           case parseVerb (unwords verbParts) of
             Left err -> do
@@ -60,6 +69,7 @@ main = do
           startInteractive defaultVerbList
         (":help":_) -> do
           putStrLn ":load <file>    load a verb list from the file (replacing any loaded verbs)"
+          putStrLn ":export <file>  export the currently loaded verbs to a file"
           putStrLn ":add <verb>     add a single verb"
           putStrLn ":list           list all loaded verbs"
           putStrLn ":clear          clear all loaded verbs"

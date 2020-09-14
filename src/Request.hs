@@ -386,18 +386,18 @@ guessNoInfo str =
 
 guess :: VerbList -> TamilString -> [(String, Verb)]
 guess verbList basicRoot =
-  checkFor verbList $ checkFor irregularVerbs $ guessNoInfo reducedStr
+  case go $ sortOn (\(TamilString root, _) -> -(length root)) combinedList of
+    [] -> guessNoInfo reducedStr
+    verbs -> verbs
   where
+    combinedList =
+      HashMap.toList (byRoot verbList) ++ HashMap.toList (byRoot irregularVerbs)
     reducedStr =
       case untamil basicRoot of
         Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortishVowel v -> rest
         Vowel (U Short) : Consonant c : rest@(Consonant o : _) | c == o, mayDouble c -> rest
         Vowel (U Short) : rest@(Consonant c : _) | mayDouble c -> rest
         str -> str
-    checkFor verbList other =
-      case go $ sortOn (\(TamilString root, _) -> -(length root)) $ HashMap.toList $ byRoot verbList of
-        [] -> other
-        verbs -> verbs
     go [] = []
     go ((root, verbs):rest) =
       case stripSuffix root basicRoot of
