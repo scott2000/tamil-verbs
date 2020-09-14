@@ -410,11 +410,11 @@ guess verbList basicRoot =
           in
             map updateVerb verbs
 
-lookupVerb :: VerbList -> Bool -> String -> Either String [(String, Verb)]
-lookupVerb verbList allowGuess word =
+lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either String [(String, Verb)]
+lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup word $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (show $ verbRoot verb, verb)) $ sort verbs
+      Right $ map (\verb -> (showTamil $ verbRoot verb, verb)) $ sort verbs
     Nothing ->
       case parseTamil word of
         Left err ->
@@ -468,7 +468,7 @@ processRequest verbList verb conjugation = do
       else
         showUsing showTamil . hide
   when (not $ crError request)
-    case lookupVerb verbList (crGuess request) word of
+    case lookupVerb verbList showTamil (crGuess request) word of
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
       Right [(_, verb)] ->

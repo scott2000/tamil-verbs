@@ -68,8 +68,8 @@ main = do
           putStrLn $ "reset to default verb list (" ++ count defaultVerbList ++ " verbs)"
           startInteractive defaultVerbList
         (":help":_) -> do
-          putStrLn ":load <file>    load a verb list from the file (replacing any loaded verbs)"
           putStrLn ":export <file>  export the currently loaded verbs to a file"
+          putStrLn ":load <file>    load a verb list from a file (replacing any loaded verbs)"
           putStrLn ":add <verb>     add a single verb"
           putStrLn ":list           list all loaded verbs"
           putStrLn ":clear          clear all loaded verbs"

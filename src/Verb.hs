@@ -197,6 +197,7 @@ instance Ord Verb where
   a `compare` b =
     verbClass a `compare` verbClass b
     <> verbRoot a `compare` verbRoot b
+    <> verbPrefix a `compare` verbPrefix b
 
 instance Show Verb where
   show Verb { .. } =

@@ -55,7 +55,7 @@ Conjugate tamil verbs in various forms for different subjects
 - `respectful`: make the conjugation respectful (for `command`)
 - `guess`: if there is no known definition, guess how to conjugate the verb
   based on how it looks and based on similarities to other verbs
-- `alternatives`: show alternative conjugations which are valid but less common
+- `alternative`: show alternative conjugations which are valid but less common
 - `tamil`: only show the result in Tamil letters
 - `latin`/`english`: only show the result in Latin letters
 
@@ -107,18 +107,18 @@ all definitions. These are separated by periods (`.`) like the other sections.
 
 - `defect` makes the verb "defective" in that it will default to only
   conjugating for adhu in the future unless another subject or tense is
-  explicitly requested (e.g. for teri since teriyum should be the default)
-- `past P` makes `P` be the past tense stem of the verb (e.g. vandh for vaa)
+  explicitly requested (e.g. for `teri` since `teriyum` should be the default)
+- `past P` makes `P` be the past tense stem of the verb (e.g. `vandh` for `vaa`)
 - `stem S` makes `S` be the stem for present and future tense
-  (e.g. varu for vaa)
+  (e.g. `varu` for `vaa`)
 - `future F` makes `F` be the future tense stem for rational nouns
-- `adhu A` makes `A` be the future tense stem for adhu and avai
-- `inf I` makes `I` be the infinitive root to which -a is added to make the
-  infinitive (e.g. pOg for pO)
-- `resp R` makes `R` be the respectful command (e.g. vaarungaL for vaa)
+- `adhu A` makes `A` be the future tense stem for `adhu` and `avai`
+- `inf I` makes `I` be the infinitive root to which `-a` is added to make the
+  infinitive (e.g. `pOg` for `pO`)
+- `resp R` makes `R` be the respectful command (e.g. `vaarungaL` for `vaa`)
 
 Putting it all together, the entry for the compound irregular verb கொண்டுவா
-(koNDuvaa) looks like:
+(`koNDuvaa`) looks like:
 
 ```
 2W koNDu vaa. bring. past vandh. stem varu. resp vaarungaL

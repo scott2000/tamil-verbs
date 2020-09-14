@@ -129,11 +129,9 @@ getPast verb =
           common $ replaceLastLetter root "RR"
         (Class1 Strong, _) ->
           common $ suffix root "tt"
-        (Class2 Weak, Retroflex _) ->
+        (Class2 _, Retroflex _) ->
           common $ replaceLastLetter root "NT"
-        (Class2 Weak, Alveolar _) ->
-          common $ replaceLastLetter root "ndR"
-        (Class2 Strong, Alveolar L) ->
+        (Class2 _, Alveolar _) ->
           common $ replaceLastLetter root "ndR"
         (Class2 _, _) ->
           common $ suffix root "ndh"
@@ -335,7 +333,7 @@ getStem verb =
         Strong ->
           let root = verbRoot verb in
           case getEnding root of
-            Retroflex L | Class1 _ <- verbClass verb ->
+            Retroflex L ->
               common $ replaceLastLetter root "T"
             Alveolar L ->
               common $ replaceLastLetter root "R"
