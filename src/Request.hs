@@ -228,7 +228,7 @@ parseConjugationRequest parts = do
           updateFormat TRLatin
         "neg" ->
           return cr { crNegative = True }
-        "res" ->
+        "resp" ->
           return cr { crRespectful = True }
         "alt" ->
           return cr { crAlt = True }

@@ -45,6 +45,7 @@
 
 # Class 2 Strong
 2S nil. stop, stand
+2S tiRa. open, unlock, reveal
 2S naDa. walk, happen
 2S paRa. fly
 2S maRa. forget
@@ -66,6 +67,7 @@
 3 nambu. believe, trust, hope
 3 paaDu. sing
 3 pEsu. speak, talk
+3 mooDu. close, shut, cover, hide
 3 viLaiyaaDu. play
 3 veTTu. cut
 3 vaangu. buy
