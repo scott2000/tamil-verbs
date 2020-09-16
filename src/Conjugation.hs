@@ -232,13 +232,7 @@ getInfinitiveRootKind kind verb =
     Nothing ->
       let stem = collapse $ getStemKind kind verb in
       case getStrength verb of
-        Strong | StemStrengthBased <- kind ->
-          common $ stem `append`
-            if endsInHardConsonant stem then
-              "k"
-            else
-              "kk"
-        _ ->
+        Weak ->
           if endsInLongVowel stem then
             let basic = stem `append` "g" in
             case verbClass verb of
@@ -248,6 +242,17 @@ getInfinitiveRootKind kind verb =
                 ChoiceString [basic] [stem]
           else
             common stem
+        Strong ->
+          common $
+            case getEnding stem of
+              Retroflex L -> stem
+              Alveolar L -> stem
+              _ ->
+                stem `append`
+                  if endsInHardConsonant stem then
+                    "k"
+                  else
+                    "kk"
 
 getInfinitiveRoot :: Verb -> ChoiceString
 getInfinitiveRoot verb =

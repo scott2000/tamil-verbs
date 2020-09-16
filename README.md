@@ -2,7 +2,7 @@
 
 Conjugate tamil verbs in various forms for different subjects
 
-### Examples
+## Examples
 
 ```
 > vaa past avan
@@ -30,6 +30,11 @@ Conjugate tamil verbs in various forms for different subjects
 ```
 
 ```
+> sel past relative avan
+சென்றவன் (sendRavan)
+```
+
+```
 > become adhu
 ஆனது (aanadhu), ஆயது (aayadhu), ஆயிற்று (aayitRu)
 ஆகிறது (aagiRadhu)
@@ -41,7 +46,7 @@ Conjugate tamil verbs in various forms for different subjects
 கொண்டுவருவதில்லை (koNDuvaruvadhillai)
 ```
 
-### Valid conjugation arguments
+## Valid conjugation arguments
 
 - `past`: past tense
 - `present`: present tense
@@ -62,7 +67,7 @@ Conjugate tamil verbs in various forms for different subjects
 
 *There are also many abbreviated forms of these arguments which are accepted.*
 
-### Extra features
+## Extra features
 
 Many alternative conjugations are supported which can be shown using
 `alternative`. Additionally, verbs and subjects can be given using either Latin
@@ -79,11 +84,11 @@ paDikkiRaay; paDikkindRaay
 ```
 
 ```
-> ஆ past அது tamil alternative
-ஆனது, ஆயது, ஆயிற்று; ஆயினது, ஆகினது, ஆயியது, ஆகியது, ஆகிற்று
+> சொல் past அது tamil alternative
+சொன்னது, சொல்லியது, சொல்லிற்று; சொல்லினது
 ```
 
-### Vocab lists
+## Vocab lists
 
 There is a built-in vocab list with some very basic verbs, but if you want to
 use your own vocab list, you can load a custom list of verbs by either passing a
@@ -124,14 +129,14 @@ Putting it all together, the entry for the compound irregular verb கொண்�
 2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
 ```
 
-### Verb classes
+## Verb classes
 
 The verb classification this program uses has 5 classes. Each of these classes
 differ in many ways, but the differences are easiest to see for the past tense
 and the future tense. There are also a few special cases in each class depending
 on the ending of the verb root.
 
-#### 1 Weak
+### 1 Weak
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |
@@ -139,7 +144,7 @@ on the ending of the verb root.
 | -று |  பெறு | ற்ற்- | பெற்றேன் | -வ்- | பெறுவேன் |
 | *other* | செய் | -த்- | செய்தேன் | -வ்- | செய்வேன் |
 
-#### 1 Strong
+### 1 Strong
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |
@@ -147,7 +152,7 @@ on the ending of the verb root.
 | -ல் | கல் | ற்ற்- | கற்றேன் | ற்ப்- | கற்பேன் |
 | *other* | பார் | -த்த்- | பார்த்தேன் | -ப்ப்- | பார்ப்பேன் |
 
-#### 2 Weak
+### 2 Weak
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |
@@ -157,14 +162,14 @@ on the ending of the verb root.
 | -ல் | செல் | ன்ற்- | சென்றேன் | -வ்- | செல்வேன் |
 | *other* | உட்கார் | -ந்த்- | உட்கார்ந்தேன் | -வ்- | உட்கார்வேன் |
 
-#### 2 Strong
+### 2 Strong
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |
 | -ல் | நில் | ன்ற்- | நின்றேன் | ற்ப்- | நிற்பேன் |
 | *other* | இரு | -ந்த்- | இருந்தேன் | -ப்ப்- | இருப்பேன் |
 
-#### 3 (Weak)
+### 3 (Weak)
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |

@@ -7,6 +7,7 @@ import Conjugation
 import Control.Monad
 
 import Data.List
+import Data.Maybe
 import Data.Char
 
 import System.IO
@@ -66,8 +67,8 @@ data ConjugationRequest = ConjugationRequest
   , crAlt :: Bool
   , crError :: Bool }
 
-getConjugations :: Verb -> ConjugationRequest -> [Conjugation]
-getConjugations verb cr =
+getConjugations :: ConjugationRequest -> Verb -> [Conjugation]
+getConjugations cr verb =
   if crError cr then [] else
   if crNegative cr then
     if crRespectful cr then
@@ -501,19 +502,28 @@ processRequest verbList verb conjugation = do
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
       Right [(_, verb)] ->
-        forM_ (getConjugations verb request) \conjugation ->
+        forM_ (getConjugations request verb) \conjugation ->
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
-        let sortedVerbs = sortOn (\(_, v) -> v) verbs in
-        forM_ sortedVerbs \(header, verb) ->
-          case getConjugations verb request of
-            [] -> return ()
-            [conjugation] ->
-              putStrLn $ header ++ ": " ++ showChoices (conjugate conjugation verb)
-            conjugations -> do
-              putStrLn $ header ++ ":"
-              forM_ conjugations \conjugation ->
-                putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
+        let
+          sortedVerbs = sortOn (\(_, v) -> v) verbs
+          conjugations = flip mapMaybe sortedVerbs \(header, verb) ->
+            case getConjugations request verb of
+              [] -> Nothing
+              conjugations -> Just (header, verb, conjugations)
+          allSingle = flip all conjugations \case
+            (_, _, [_]) -> True
+            _ -> False
+        in
+          forM_ conjugations \(header, verb, conjugations) ->
+            case conjugations of
+              [] -> return ()
+              [conjugation] | allSingle ->
+                putStrLn $ header ++ ": " ++ showChoices (conjugate conjugation verb)
+              _ -> do
+                putStrLn $ header ++ ":"
+                forM_ conjugations \conjugation ->
+                  putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
 splitHyphen :: String -> [String]
 splitHyphen = splitWith \case
