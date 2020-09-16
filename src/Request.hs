@@ -504,7 +504,8 @@ processRequest verbList verb conjugation = do
         forM_ (getConjugations verb request) \conjugation ->
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
-        forM_ verbs \(header, verb) ->
+        let sortedVerbs = sortOn (\(_, v) -> v) verbs in
+        forM_ sortedVerbs \(header, verb) ->
           case getConjugations verb request of
             [] -> return ()
             [conjugation] ->
