@@ -15,6 +15,7 @@ import qualified Data.HashMap.Strict as HashMap
 
 data TypeRequest
   = TRAdjective
+  | TRRelative
   | TRNoun
   | TRAdverb
   | TRInfinitive
@@ -24,6 +25,7 @@ data TypeRequest
 instance Show TypeRequest where
   show = \case
     TRAdjective  -> "adjective"
+    TRRelative   -> "relative"
     TRNoun       -> "noun"
     TRAdverb     -> "adverb"
     TRInfinitive -> "infinitive"
@@ -94,10 +96,16 @@ getConjugations verb cr =
         Nothing
           | defective -> Third $ Irrational Adhu
           | otherwise -> Naan
+    thirdSubject =
+      case crSubject cr of
+        Just (Third subject) -> subject
+        _ -> Avar
     parseNegative =
       case crType cr of
         Just TRAdjective ->
           [Negative NegativeAdjective]
+        Just TRRelative ->
+          [Negative $ NegativeRelative thirdSubject]
         Just TRNoun ->
           [Negative NegativeNoun]
         Just TRAdverb ->
@@ -118,6 +126,8 @@ getConjugations verb cr =
       case crType cr of
         Just TRAdjective ->
           map (Positive . Adjective) tenses
+        Just TRRelative ->
+          map (\tense -> Positive $ Relative tense thirdSubject) tenses
         Just TRNoun ->
           [Positive Noun]
         Just TRAdverb ->
@@ -169,6 +179,11 @@ parseConjugationRequest parts = do
     ConjugationRequest { crRespectful = True } -> do
       hPutStrLn stderr "warning: only commands can be made respectful"
       return request
+    ConjugationRequest { crType = Just TRRelative, crSubject = Just (Third _) } ->
+      return request
+    ConjugationRequest { crType = Just TRRelative, crSubject = Just _ } -> do
+      hPutStrLn stderr "error: only third-person subjects can be used with relative nouns"
+      return request { crError = True }
     _ ->
       return request
   where
@@ -186,6 +201,8 @@ parseConjugationRequest parts = do
           return cr { crAlt = True }
         "adjective" ->
           updateType TRAdjective
+        "relative" ->
+          updateType TRRelative
         "noun" ->
           updateType TRNoun
         "adverb" ->
@@ -216,6 +233,8 @@ parseConjugationRequest parts = do
           return cr { crAlt = True }
         "adj" ->
           updateType TRAdjective
+        "rel" ->
+          updateType TRRelative
         "adv" ->
           updateType TRAdverb
         "inf" ->
@@ -238,6 +257,8 @@ parseConjugationRequest parts = do
           return cr { crGuess = True }
         "j" ->
           updateType TRAdjective
+        "l" ->
+          updateType TRRelative
         "v" ->
           updateType TRAdverb
         "i" ->
@@ -551,7 +572,7 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "en"
-      , verbInfinitiveRoot = Just $ ChoiceString ["ennu"] ["enu"]
+      , verbInfinitiveRoot = Just $ ChoiceString ["ennu", "enu"] []
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "agal"

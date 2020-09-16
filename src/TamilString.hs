@@ -87,6 +87,9 @@ promote (ChoiceString [] (c:u)) =
   ChoiceString [c] u
 promote other = other
 
+demote :: ChoiceString -> ChoiceString
+demote (ChoiceString c u) = ChoiceString [] (c ++ u)
+
 splitWith :: (Char -> Bool) -> String -> [String]
 splitWith isBreak s =
   case dropWhile isBreak s of

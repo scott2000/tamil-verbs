@@ -27,6 +27,9 @@ instance TamilShow IrrationalSubject where
     Adhu    -> "adhu"
     Avai    -> "avai"
 
+instance Show IrrationalSubject where
+  show = map toLower . toLatin . tamilShow
+
 allIrrationalSubjects :: [IrrationalSubject]
 allIrrationalSubjects = [Adhu, Avai]
 
@@ -43,6 +46,15 @@ allThirdPersonSubjects =
   [ Avan, Aval, Avar, Avargal ]
   ++ map Irrational allIrrationalSubjects
 
+relativeSuffix :: ThirdPersonSubject -> ChoiceString
+relativeSuffix = \case
+  Avan ->
+    ChoiceString ["avan"] ["On"]
+  Avar ->
+    ChoiceString ["avar"] ["Or"]
+  other ->
+    common $ tamilShow other
+
 instance TamilShow ThirdPersonSubject where
   tamilShow = \case
     Avan         -> "avan"
@@ -50,6 +62,9 @@ instance TamilShow ThirdPersonSubject where
     Avar         -> "avar"
     Avargal      -> "avargaL"
     Irrational i -> tamilShow i
+
+instance Show ThirdPersonSubject where
+  show = map toLower . toLatin . tamilShow
 
 data Subject
   = Naan
@@ -142,19 +157,23 @@ getPast verb =
         (Class3, _) ->
           common $ suffix root "in"
 
-getPresentRoot :: Verb -> ChoiceString
-getPresentRoot verb =
+oneOrTwoOnStem :: Vallinam -> Verb -> ChoiceString
+oneOrTwoOnStem hard verb =
   forChoice (getStem verb) \stem ->
     stem `append` case getStrength verb of
-      Strong | not $ endsInHardConsonant stem -> "kk"
-      _ -> "k"
+      Strong | not $ endsInHardConsonant stem ->
+        TamilString [c, c]
+      _ ->
+        TamilString [c]
+  where
+    c = Consonant $ Hard hard
 
 getPresent :: Verb -> Bool -> ChoiceString
 getPresent verb avai =
   if avai then
-    getPresentRoot verb |+ "indRan"
+    oneOrTwoOnStem K verb |+ "indRan"
   else
-    getPresentRoot verb |+| ChoiceString ["iR"] ["indR"]
+    oneOrTwoOnStem K verb |+| ChoiceString ["iR"] ["indR"]
 
 {-
 
@@ -206,14 +225,20 @@ getFutureAdhu verb =
             else
               "kkum"
 
-getInfinitiveRoot :: Verb -> ChoiceString
-getInfinitiveRoot verb =
+getInfinitiveRootKind :: StemKind -> Verb -> ChoiceString
+getInfinitiveRootKind kind verb =
   case verbInfinitiveRoot verb of
     Just root -> root
     Nothing ->
-      let stem = collapse $ getStem verb in
+      let stem = collapse $ getStemKind kind verb in
       case getStrength verb of
-        Weak ->
+        Strong | StemStrengthBased <- kind ->
+          common $ stem `append`
+            if endsInHardConsonant stem then
+              "k"
+            else
+              "kk"
+        _ ->
           if endsInLongVowel stem then
             let basic = stem `append` "g" in
             case verbClass verb of
@@ -223,12 +248,14 @@ getInfinitiveRoot verb =
                 ChoiceString [basic] [stem]
           else
             common stem
-        Strong ->
-          common $ stem `append`
-            if endsInHardConsonant stem then
-              "k"
-            else
-              "kk"
+
+getInfinitiveRoot :: Verb -> ChoiceString
+getInfinitiveRoot verb =
+  let plain = getInfinitiveRootKind StemPlain verb in
+  case getStrength verb of
+    Weak -> plain
+    Strong ->
+      plain <> demote (getInfinitiveRootKind StemStrengthBased verb)
 
 getNegativeFutureAdhu :: Verb -> ChoiceString
 getNegativeFutureAdhu verb =
@@ -236,7 +263,7 @@ getNegativeFutureAdhu verb =
 
 getNegativeFutureAvai :: Verb -> ChoiceString
 getNegativeFutureAvai verb =
-  getInfinitiveRoot verb |+| uncommon "aa"
+  getInfinitiveRoot verb |+ "aa"
 
 getNounAdhu :: Verb -> ChoiceString
 getNounAdhu verb =
@@ -267,7 +294,7 @@ getNounThal verb =
 
 getNounKai :: Verb -> ChoiceString
 getNounKai verb =
-  getPresentRoot verb |+| common "ai"
+  oneOrTwoOnStem K verb |+| common "ai"
 
 getNounAl :: Verb -> ChoiceString
 getNounAl verb =
@@ -295,7 +322,7 @@ getAdverb verb =
 
 getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
-  getInfinitiveRoot verb |+ "a"
+  getInfinitiveRootKind StemStrengthBased verb |+ "a"
 
 getRespectfulCommand :: Verb -> ChoiceString
 getRespectfulCommand verb =
@@ -316,23 +343,36 @@ getRespectfulCommand verb =
         _ ->
           common $ suffix root "ungaL"
 
+data StemKind
+  = StemStrengthBased
+  | StemPlain
+
+getStemKind :: StemKind -> Verb -> ChoiceString
+getStemKind kind verb =
+  case kind of
+    StemStrengthBased ->
+      case strength of
+        Weak -> plain
+        Strong -> sub
+    StemPlain -> plain
+  where
+    strength = getStrength verb
+    plain =
+      case verbStem verb of
+        Just stem -> stem
+        Nothing -> getRoot verb
+    sub =
+      forChoice plain \stem ->
+        case getEnding stem of
+          Retroflex L ->
+            replaceLastLetter stem "T"
+          Alveolar L ->
+            replaceLastLetter stem "R"
+          _ ->
+            stem
+
 getStem :: Verb -> ChoiceString
-getStem verb =
-  case verbStem verb of
-    Just stem -> stem
-    Nothing ->
-      case getStrength verb of
-        Weak ->
-          getRoot verb
-        Strong ->
-          let root = verbRoot verb in
-          case getEnding root of
-            Retroflex L ->
-              common $ replaceLastLetter root "T"
-            Alveolar L ->
-              common $ replaceLastLetter root "R"
-            _ ->
-              common root
+getStem = getStemKind StemStrengthBased
 
 data FiniteConjugation
   = Past
@@ -340,35 +380,41 @@ data FiniteConjugation
   | Future
   deriving Show
 
+getClass3PastNYForm :: Verb -> ChoiceString
+getClass3PastNYForm verb =
+  let
+    past = getPast verb
+    withY =
+      filterMapChoice past \case
+        TamilString (Consonant (Soft NAlveolar) : rest@(Vowel _ : _)) ->
+          Just $ TamilString (Consonant (Medium Y) : rest)
+        _ ->
+          Nothing
+    isIrregular =
+      case getEnding $ verbRoot verb of
+        LongVowel  -> True
+        Alveolar L -> True
+        _          -> False
+  in
+    if isIrregular then
+      promote past <> promote withY
+    else
+      promote withY <> promote past
+
 conjugateFinite :: FiniteConjugation -> Subject -> Verb -> ChoiceString
 conjugateFinite conjugation subject verb =
   case (conjugation, verbClass verb, subject) of
     (Past, Class3, Third (Irrational Adhu)) ->
       let
-        past = getPast verb
-        nadhu = past |+ "adhu"
-        yadhu =
-          filterMapChoice past \case
-            TamilString (Consonant (Soft NAlveolar) : rest@(Vowel _ : _)) ->
-              Just (TamilString rest `append` "yadhu")
-            _ ->
-              Nothing
+        ny = getClass3PastNYForm verb
         yitru =
-          filterMapChoice past \case
+          filterMapChoice ny \case
             TamilString (Consonant (Soft NAlveolar) : rest@(Vowel (I Short) : _)) ->
               Just (TamilString rest `append` "tRu")
             _ ->
               Nothing
-        isIrregular =
-          case getEnding $ verbRoot verb of
-            LongVowel  -> True
-            Alveolar L -> True
-            _          -> False
       in
-        if isIrregular then
-          promote nadhu <> promote yadhu <> promote yitru
-        else
-          promote yadhu <> promote nadhu <> promote yitru
+        ny |+ "adhu" <> promote yitru
     (Past, _, _) ->
       usingAvaiSuffix subject \avai ->
         if avai then
@@ -389,11 +435,25 @@ conjugateFinite conjugation subject verb =
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
+getRelative :: FiniteConjugation -> Verb -> ChoiceString
+getRelative conjugation verb =
+  case conjugation of
+    Past
+      | verbClass verb == Class3 ->
+        getClass3PastNYForm verb
+      | otherwise ->
+        getPast verb
+    Present ->
+      getPresent verb False
+    Future ->
+      oneOrTwoOnStem P verb
+
 type Respectful = Bool
 
 data PositiveConjugation
   = Finite FiniteConjugation Subject
   | Adjective FiniteConjugation
+  | Relative FiniteConjugation ThirdPersonSubject
   | Noun
   | Adverb
   | Command Respectful
@@ -410,6 +470,10 @@ conjugatePositive conjugation verb =
           TamilString rest
         other ->
           other
+    Relative Future (Irrational Adhu) ->
+      getNounAdhu verb
+    Relative finite subject ->
+      getRelative finite verb |+| relativeSuffix subject
     Adverb ->
       getAdverb verb
     Noun ->
@@ -424,6 +488,7 @@ data NegativeConjugation
   | NegativeFuture Subject
   | NegativeHabitual
   | NegativeAdjective
+  | NegativeRelative ThirdPersonSubject
   | NegativeNoun
   | NegativeAdverb
   | NegativeCommand Respectful
@@ -437,21 +502,23 @@ conjugateNegative conjugation verb =
     NegativeFuture (Third (Irrational Adhu)) ->
       getNegativeFutureAdhu verb
     NegativeFuture (Third (Irrational Avai)) ->
-      getNegativeFutureAdhu verb <> getNegativeFutureAvai verb
+      getNegativeFutureAdhu verb <> demote (getNegativeFutureAvai verb)
     NegativeFuture subject ->
       getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
     NegativeHabitual ->
       getNounAdhu verb |+ "illai"
     NegativeAdjective ->
       getNegativeFutureAdhu verb |+ "a" <> getNegativeFutureAvai verb
+    NegativeRelative subject ->
+      getNegativeFutureAdhu verb |+| relativeSuffix subject
     NegativeNoun ->
-      getInfinitiveRoot verb |+ "aadhadhu"
+      getNegativeFutureAdhu verb |+ "adhu" <> getInfinitiveRoot verb |+ "aamai"
     NegativeAdverb ->
-      getInfinitiveRoot verb |+ "aamal"
+      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAdhu verb)
     NegativeCommand False ->
-      getInfinitiveRoot verb |+ "aadhE"
+      getNegativeFutureAdhu verb |+ "E"
     NegativeCommand True ->
-      getInfinitiveRoot verb |+ "aadheergaL"
+      getNegativeFutureAdhu verb |+ "eergaL"
 
 data Conjugation
   = Positive PositiveConjugation

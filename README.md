@@ -49,7 +49,8 @@ Conjugate tamil verbs in various forms for different subjects
 - `infinitive`: infinitive
 - `adverb`: adverb or AvP
 - `adjective`: verbal adjective
-- `noun`: verbal noun
+- `relative`: relative noun referring to someone who does the action
+- `noun`: verbal noun referring to the action of the verb
 - `command`: imperative command
 - `negative`: make the conjugation negative
 - `respectful`: make the conjugation respectful (for `command`)

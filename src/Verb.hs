@@ -137,6 +137,8 @@ parseVerb s =
       verbRoot <- parseTamilNonEmpty root
       checkValid "root" root verbRoot
 
+      checkValid "verb" (prefix ++ " " ++ root) $ suffix verbPrefix verbRoot
+
       return defaultVerb { verbClass, verbPrefix, verbRoot }
     removeA = \case
       TamilString (Vowel (A Short) : rest) ->
