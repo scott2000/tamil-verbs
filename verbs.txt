@@ -21,7 +21,7 @@
 1S koDu. give
 1S kiDai. be available
 1S paDi. study, read
-1S paDu. lie down
+1S paDu. lie down, go to bed
 1S piDi. hold, catch, be liked
 1S paar. look, see
 1S muDi. finish
@@ -33,6 +33,7 @@
 2W pOdhu. be enough. defect. past pOndh, pOrndh
 2W en. say, quote. inf enn; enu
 2W kaaN. see. past kaND
+2W ezhu. get up, wake up
 2W koL. have, hold
 2W kol. kill
 2W sel. go

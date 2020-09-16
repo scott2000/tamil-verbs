@@ -124,10 +124,19 @@ parseVerb s =
     _ ->
       Left "missing definition for verb"
   where
+    checkValid kind unparsed str =
+      case findError str of
+        Nothing -> return ()
+        Just err -> Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
     getRootInfo class_ prefix root = do
       verbClass <- parseClass class_
+
       verbPrefix <- parseTamil' prefix
+      checkValid "prefix" prefix verbPrefix
+
       verbRoot <- parseTamilNonEmpty root
+      checkValid "root" root verbRoot
+
       return defaultVerb { verbClass, verbPrefix, verbRoot }
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"

@@ -414,14 +414,15 @@ lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either St
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup word $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (showTamil $ verbRoot verb, verb)) $ sort verbs
+      Right $ map (\verb -> (showTamil $ suffix (verbPrefix verb) (verbRoot verb), verb)) $ sort verbs
     Nothing ->
+      let notDefinition = Left "cannot find word with that definition" in
       case parseTamil word of
         Left err ->
           if any isUpper word then
             Left $ show err
           else if any isSpace word then
-            Left "cannot find word with that definition"
+            notDefinition
           else
             Left $ "not found as definition and not valid as Tamil (" ++ show err ++ ")"
         Right tamil ->
@@ -429,28 +430,35 @@ lookupVerb verbList showTamil allowGuess word =
             Just verbs ->
               Right $ map (\verb -> (intercalate ", " $ verbDefinitions verb, verb)) $ sort verbs
             Nothing ->
-              if allowGuess then
-                case guess verbList tamil of
-                  [] ->
-                    Left "couldn't make a good guess (make sure there isn't an extra U)"
-                  verbs ->
-                    Right verbs
-              else
-                Left $ "verb not found" ++
-                  let
-                    normalized = normalize tamil
-                    suggestions = filter ((normalized ==) . normalize) $ HashMap.keys $ byRoot verbList
-                  in
-                    case take 3 $ sort suggestions of
+              case findError tamil of
+                Just err ->
+                  if allowGuess then
+                    Left err
+                  else
+                    notDefinition
+                Nothing ->
+                  if allowGuess then
+                    case guess verbList tamil of
                       [] ->
-                        case guess verbList tamil of
-                          [] -> ""
-                          _ ->
-                            -- Only recommend if it'll actually work
-                            " (maybe try again with 'guess'?)"
-                      suggestions ->
-                        let showFunction = if all isAscii word then toLatin else toTamil in
-                        " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
+                        Left "couldn't make a good guess (make sure there isn't an extra U)"
+                      verbs ->
+                        Right verbs
+                  else
+                    Left $ "verb not found" ++
+                      let
+                        normalized = normalize tamil
+                        suggestions = filter ((normalized ==) . normalize) $ HashMap.keys $ byRoot verbList
+                      in
+                        case take 3 $ sort suggestions of
+                          [] ->
+                            case guess verbList tamil of
+                              [] -> ""
+                              _ ->
+                                -- Only recommend if it'll actually work
+                                " (maybe try again with 'guess'?)"
+                          suggestions ->
+                            let showFunction = if all isAscii word then toLatin else toTamil in
+                            " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
 
 processRequest :: VerbList -> String -> String -> IO ()
 processRequest verbList verb conjugation = do

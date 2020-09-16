@@ -117,6 +117,21 @@ data Vowel
 
 instance Hashable Vowel
 
+instance Show Vowel where
+  show = \case
+    A Short -> "அ (a)"
+    A Long  -> "ஆ (aa)"
+    I Short -> "இ (i)"
+    I Long  -> "ஈ (ee)"
+    U Short -> "உ (u)"
+    U Long  -> "ஊ (oo)"
+    E Short -> "எ (e)"
+    E Long  -> "ஏ (E)"
+    Ai      -> "ஐ (ai)"
+    O Short -> "ஒ (o)"
+    O Long  -> "ஓ (O)"
+    Au      -> "ஔ (au)"
+
 vowelInitial :: Vowel -> Char
 vowelInitial = \case
   A Short -> 'அ'
@@ -176,6 +191,15 @@ data Vallinam
 
 instance Hashable Vallinam
 
+instance Show Vallinam where
+  show = \case
+    K          -> "க் (k/g)"
+    Ch         -> "ச் (ch/s)"
+    TRetroflex -> "ட் (T/D)"
+    TDental    -> "த் (t/d)"
+    P          -> "ப் (p/b)"
+    RAlveolar  -> "ற் (R)"
+
 getPaired :: Vallinam -> Mellinam
 getPaired = \case
   K          -> Ng
@@ -196,6 +220,15 @@ data Mellinam
 
 instance Hashable Mellinam
 
+instance Show Mellinam where
+  show = \case
+    Ng         -> "ங் (ng~)"
+    Ny         -> "ஞ் (ny)"
+    NRetroflex -> "ண் (N)"
+    NDental    -> "ந் (n)"
+    M          -> "ம் (m)"
+    NAlveolar  -> "ன் (n)"
+
 data Idaiyinam
   = Y
   | R
@@ -207,6 +240,15 @@ data Idaiyinam
 
 instance Hashable Idaiyinam
 
+instance Show Idaiyinam where
+  show = \case
+    Y          -> "ய் (y)"
+    R          -> "ர் (r)"
+    LAlveolar  -> "ல் (l)"
+    V          -> "வ் (v)"
+    Zh         -> "ழ் (zh)"
+    LRetroflex -> "ள் (L)"
+
 data Consonant
   = Hard !Vallinam
   | Soft !Mellinam
@@ -214,6 +256,12 @@ data Consonant
   deriving (Ord, Eq, Generic)
 
 instance Hashable Consonant
+
+instance Show Consonant where
+  show = \case
+    Hard h   -> show h
+    Soft s   -> show s
+    Medium m -> show m
 
 consonantWithA :: Consonant -> Char
 consonantWithA = \case
@@ -249,6 +297,11 @@ data TamilLetter
   deriving (Ord, Eq, Generic)
 
 instance Hashable TamilLetter
+
+instance Show TamilLetter where
+  show = \case
+    Vowel v     -> show v
+    Consonant c -> show c
 
 newtype TamilString = TamilString
   { -- | A reversed list of letters
@@ -616,9 +669,93 @@ normalize =
       Consonant (Soft Ny)           -> Consonant $ Hard Ch
       Consonant (Soft M)            -> Consonant $ Hard P
       Consonant (Soft _)            -> Consonant $ Hard TDental
-      Consonant (Medium R)          -> Consonant $ Medium R
+      Consonant (Medium Zh)         -> Consonant $ Medium R
       Consonant (Medium LRetroflex) -> Consonant $ Medium LAlveolar
       other -> other
+
+data FollowClass
+  = FollowClassA
+  | FollowClassB
+  | FollowClassC
+  | FollowClassD
+  | FollowClassE
+  deriving Eq
+
+getFollowClass :: Consonant -> FollowClass
+getFollowClass = \case
+  Hard K            -> FollowClassA
+  Hard Ch           -> FollowClassA
+  Hard TRetroflex   -> FollowClassC
+  Hard TDental      -> FollowClassA
+  Hard P            -> FollowClassA
+  Hard RAlveolar    -> FollowClassC
+  Soft Ng           -> FollowClassA
+  Soft Ny           -> FollowClassB
+  Soft NRetroflex   -> FollowClassD
+  Soft NDental      -> FollowClassB
+  Soft M            -> FollowClassB
+  Soft NAlveolar    -> FollowClassD
+  Medium Y          -> FollowClassE
+  Medium R          -> FollowClassE
+  Medium LAlveolar  -> FollowClassD
+  Medium V          -> FollowClassB
+  Medium Zh         -> FollowClassE
+  Medium LRetroflex -> FollowClassD
+
+getPreceding :: Consonant -> [FollowClass]
+getPreceding = \case
+  Hard K            -> allowCDE
+  Hard Ch           -> allowCDE
+  Hard TRetroflex   -> allowNone
+  Hard TDental      -> allowE
+  Hard P            -> allowCDE
+  Hard RAlveolar    -> allowNone
+  Soft Ng           -> allowE
+  Soft Ny           -> allowDE
+  Soft NRetroflex   -> allowNone
+  Soft NDental      -> allowE
+  Soft M            -> allowDE
+  Soft NAlveolar    -> allowNone
+  Medium Y          -> allowBDE
+  Medium R          -> allowNone
+  Medium LAlveolar  -> allowNone
+  Medium V          -> allowBDE
+  Medium Zh         -> allowNone
+  Medium LRetroflex -> allowNone
+  where
+    allowNone = []
+    allowE    = FollowClassE : allowNone
+    allowDE   = FollowClassD : allowE
+    allowBDE  = FollowClassB : allowDE
+    allowCDE  = FollowClassC : allowDE
+
+allowJunction :: Consonant -> Consonant -> Bool
+allowJunction (Medium R)  (Medium R)  = False
+allowJunction (Medium Zh) (Medium Zh) = False
+allowJunction (Soft s) (Hard h)
+  | s == getPaired h = True
+allowJunction first next
+  | first == next = True
+  | otherwise =
+    getFollowClass first `elem` getPreceding next
+
+findError :: TamilString -> Maybe String
+findError = go . untamil
+  where
+    go (current : rest@(next : _)) =
+      case (current, next) of
+        (Vowel _, Vowel _) ->
+          Just $ show VowelHiatus
+        (Consonant b, Consonant a) | not $ allowJunction a b ->
+          Just $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
+        _ -> go rest
+    go _ = Nothing
+
+isValid :: TamilString -> Bool
+isValid str =
+  case findError str of
+    Just _ -> False
+    Nothing -> True
 
 fromLetter :: TamilLetter -> TamilString
 fromLetter = TamilString . (: [])
