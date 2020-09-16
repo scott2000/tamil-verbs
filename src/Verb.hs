@@ -59,7 +59,7 @@ instance Show VerbClass where
     Class3        -> "3"
 
 -- CLASS [PREFIX] ROOT. (DEFINITION),+ (. FLAG)*
--- 2W koNDu vaa. bring. past vandh. stem varu. res vaarungaL
+-- 2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
 
 parseClass :: String -> Either String VerbClass
 parseClass = \case
@@ -68,7 +68,7 @@ parseClass = \case
   "3"     -> Right Class3
   "3W"    -> Left "expected 3 instead of 3W"
   "3S"    -> Left "class 3 cannot be strong"
-  _       -> Left "expected 1, 2, or 3 for class"
+  _       -> Left "expected 1W, 1S, 2W, 2S, or 3 for class"
   where
     parseStrength = \case
       "W" -> Right Weak
@@ -138,22 +138,46 @@ parseVerb s =
       checkValid "root" root verbRoot
 
       return defaultVerb { verbClass, verbPrefix, verbRoot }
+    removeA = \case
+      TamilString (Vowel (A Short) : rest) ->
+        Right $ TamilString (Vowel (U Short) : rest)
+      _ ->
+        Left $ "infinitive must end in " ++ show (A Short)
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"
       | otherwise          = Right verb { verbDefective = True }
     addFlag _ [flag] =
       Left $ "invalid flag for verb: " ++ flag
     addFlag verb (key : strParts) = do
-      choiceStr <- parseChoiceString $ concat strParts
+      choiceStr@(ChoiceString c u) <- parseChoiceString $ concat strParts
+      let
+        assertEnding kind ending =
+          forM_ (c ++ u) \str ->
+            case stripSuffix ending str of
+              Just _ -> return ()
+              Nothing ->
+                Left $ kind ++ " must end in " ++ show ending
       (old, verb) <-
         case key of
-          "past"   -> Right (verbPast verb, verb { verbPast = Just choiceStr })
-          "stem"   -> Right (verbStem verb, verb { verbStem = Just choiceStr })
-          "future" -> Right (verbFuture verb, verb { verbFuture = Just choiceStr })
-          "adhu"   -> Right (verbFutureAdhu verb, verb { verbFutureAdhu = Just choiceStr })
-          "inf"    -> Right (verbInfinitiveRoot verb, verb { verbInfinitiveRoot = Just choiceStr })
-          "resp"   -> Right (verbRespectfulCommand verb, verb { verbRespectfulCommand = Just choiceStr })
-          _        -> Left $ "invalid key: " ++ key
+          "adv" ->
+            if verbClass verb == Class3 then
+              Left $ "adverb cannot be changed for class 3 verbs"
+            else do
+              assertEnding "adverb" "u"
+              Right (verbAdverb verb, verb { verbAdverb = Just choiceStr })
+          "stem" -> do
+            Right (verbStem verb, verb { verbStem = Just choiceStr })
+          "adhu" -> do
+            assertEnding "future adhu" "m"
+            Right (verbFutureAdhu verb, verb { verbFutureAdhu = Just choiceStr })
+          "inf" -> do
+            choiceStr <- ChoiceString <$> mapM removeA c <*> mapM removeA u
+            Right (verbInfinitiveRoot verb, verb { verbInfinitiveRoot = Just choiceStr })
+          "resp" -> do
+            assertEnding "respectful command" "ngaL"
+            Right (verbRespectfulCommand verb, verb { verbRespectfulCommand = Just choiceStr })
+          _ ->
+            Left $ "invalid key: " ++ key
       case old of
         Nothing ->
           Right verb
@@ -168,7 +192,8 @@ parseAllVerbs file =
   where
     go lines n errs verbs =
       case lines of
-        [] -> (errs, makeVerbList verbs)
+        [] ->
+          (reverse errs, makeVerbList verbs)
         line:rest ->
           let n' = n + 1 in
           case line of
@@ -189,9 +214,8 @@ data Verb = Verb
   , verbPrefix :: TamilString
   , verbDefinitions :: [String]
   , verbDefective :: Bool
-  , verbPast :: Maybe ChoiceString
+  , verbAdverb :: Maybe ChoiceString
   , verbStem :: Maybe ChoiceString
-  , verbFuture :: Maybe ChoiceString
   , verbFutureAdhu :: Maybe ChoiceString
   , verbInfinitiveRoot :: Maybe ChoiceString
   , verbRespectfulCommand :: Maybe ChoiceString
@@ -222,11 +246,10 @@ instance Show Verb where
       addKey k (Just c) s = ". " ++ k ++ " " ++ showUsing toLatin c ++ s
       flags =
         addFlag "defect" verbDefective $
-        addKey "past" verbPast $
+        addKey "adv" verbAdverb $
         addKey "stem" verbStem $
-        addKey "future" verbFuture $
         addKey "adhu" verbFutureAdhu $
-        addKey "inf" verbInfinitiveRoot $
+        addKey "inf" ((|+ "a") <$> verbInfinitiveRoot) $
         addKey "resp" verbRespectfulCommand $
         ""
 
@@ -236,9 +259,8 @@ defaultVerb = Verb
   , verbPrefix = ""
   , verbDefinitions = []
   , verbDefective = False
-  , verbPast = Nothing
+  , verbAdverb = Nothing
   , verbStem = Nothing
-  , verbFuture = Nothing
   , verbFutureAdhu = Nothing
   , verbInfinitiveRoot = Nothing
   , verbRespectfulCommand = Nothing
@@ -360,14 +382,14 @@ defaultVerbList = makeVerbList
   , defaultVerb
       { verbRoot = "thaa"
       , verbDefinitions = ["give"]
-      , verbPast = Just "thandh"
+      , verbAdverb = Just "thandhu"
       , verbStem = Just "tharu"
       , verbRespectfulCommand = Just "thaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
       , verbDefinitions = ["come"]
-      , verbPast = Just "vandh"
+      , verbAdverb = Just "vandhu"
       , verbStem = Just "varu"
       , verbRespectfulCommand = Just "vaarungaL"
       , verbClass = Class2 Weak }

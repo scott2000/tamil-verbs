@@ -93,35 +93,34 @@ with some more advanced verbs.
 The basic format of a verb entry is:
 
 ```
-CLASS [PREFIX] VERB. DEFINITION, DEFINITION, ...
+CLASS [PREFIX] VERB. DEFINITION, ...
 ```
 
 - `CLASS` is one of `1W`, `1S`, `2W`, `2S`, or `3`
 - `PREFIX` is an optional prefix to add before the conjugated verb
   (e.g. for compound verbs)
 - `VERB` is the verb in either Latin or Tamil letters
-- `DEFINITION` is an English definition for the verb
+- `DEFINITION` is an English definition for the verb (there may be multiple)
 
 There are also some special flags for irregular verbs which can be added after
 all definitions. These are separated by periods (`.`) like the other sections.
 
 - `defect` makes the verb "defective" in that it will default to only
-  conjugating for adhu in the future unless another subject or tense is
+  conjugating for `adhu` in the future unless another subject or tense is
   explicitly requested (e.g. for `teri` since `teriyum` should be the default)
-- `past P` makes `P` be the past tense stem of the verb (e.g. `vandh` for `vaa`)
-- `stem S` makes `S` be the stem for present and future tense
+- `adv V` makes `V` be the adverb form of the verb (e.g. `vandhu` for `vaa`)
+- `stem S` makes `S` be the stem for present and future tense of the verb
   (e.g. `varu` for `vaa`)
-- `future F` makes `F` be the future tense stem for rational nouns
-- `adhu A` makes `A` be the future tense stem for `adhu` and `avai`
-- `inf I` makes `I` be the infinitive root to which `-a` is added to make the
-  infinitive (e.g. `pOg` for `pO`)
-- `resp R` makes `R` be the respectful command (e.g. `vaarungaL` for `vaa`)
+- `adhu A` makes `A` be the future tense for `adhu` and `avai`
+- `inf I` makes `I` be the infinitive form of the verb
+- `resp R` makes `R` be the respectful command for the verb
+  (e.g. `vaarungaL` for `vaa`)
 
 Putting it all together, the entry for the compound irregular verb கொண்டுவா
 (`koNDuvaa`) looks like:
 
 ```
-2W koNDu vaa. bring. past vandh. stem varu. resp vaarungaL
+2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
 ```
 
 ### Verb classes

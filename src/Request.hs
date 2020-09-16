@@ -507,7 +507,7 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "saa"
-      , verbPast = Just "sett"
+      , verbAdverb = Just "settu"
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "azhu"
@@ -526,32 +526,32 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "thaakkuRu"
-      , verbPast = Just "thaakkuND"
+      , verbAdverb = Just "thaakkuNDu"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "thaa"
-      , verbPast = Just "thandh"
+      , verbAdverb = Just "thandhu"
       , verbStem = Just "tharu"
       , verbRespectfulCommand = Just "thaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
-      , verbPast = Just "vandh"
+      , verbAdverb = Just "vandhu"
       , verbStem = Just "varu"
       , verbRespectfulCommand = Just "vaarungaL"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "pOdhu"
       , verbDefective = True
-      , verbPast = Just $ ChoiceString ["pOndh", "pOrndh"] []
+      , verbAdverb = Just $ ChoiceString ["pOndhu", "pOrndhu"] []
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "kaaN"
-      , verbPast = Just "kaND"
+      , verbAdverb = Just "kaNDu"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "en"
-      , verbInfinitiveRoot = Just $ ChoiceString ["enn"] ["enu"]
+      , verbInfinitiveRoot = Just $ ChoiceString ["ennu"] ["enu"]
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "agal"

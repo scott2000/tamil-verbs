@@ -114,19 +114,19 @@ usingAvaiSuffix subject f =
 
 getPast :: Verb -> ChoiceString
 getPast verb =
-  case verbPast verb of
-    Just past -> past
+  case verbAdverb verb of
+    Just adverb -> adverb
     Nothing ->
       let root = verbRoot verb in
       case (verbClass verb, getEnding root) of
         (Class1 Weak, HardAndU h) ->
           common $ replaceLastLetter root $ TamilString [Consonant $ Hard h, Consonant $ Hard h]
+        (Class1 _, Retroflex L) ->
+          common $ replaceLastLetter root "TT"
+        (Class1 _, Alveolar L) ->
+          common $ replaceLastLetter root "RR"
         (Class1 Weak, _) ->
           common $ suffix root "dh"
-        (Class1 Strong, Retroflex L) ->
-          common $ replaceLastLetter root "TT"
-        (Class1 Strong, Alveolar L) ->
-          common $ replaceLastLetter root "RR"
         (Class1 Strong, _) ->
           common $ suffix root "tt"
         (Class2 _, Retroflex _) ->
@@ -135,15 +135,12 @@ getPast verb =
           common $ replaceLastLetter root "ndR"
         (Class2 _, _) ->
           common $ suffix root "ndh"
-        (Class3, ending) ->
-          let basic = suffix root "in" in
-          case ending of
-            LongVowel ->
-              ChoiceString [root `append` "n"] [basic, root `append` "gin"]
-            Alveolar L ->
-              ChoiceString [replaceLastLetter root "nn"] [basic]
-            _ ->
-              common basic
+        (Class3, LongVowel) ->
+          ChoiceString [root `append` "n"] [suffix root "in", root `append` "gin"]
+        (Class3, Alveolar L) ->
+          ChoiceString [replaceLastLetter root "nn"] [suffix root "in"]
+        (Class3, _) ->
+          common $ suffix root "in"
 
 getPresentRoot :: Verb -> ChoiceString
 getPresentRoot verb =
@@ -172,17 +169,14 @@ Class 3 with long vowel ending => -ன் - past, -ய் adverb, -ங்கள�
 
 getFuture :: Verb -> ChoiceString
 getFuture verb =
-  case verbFuture verb of
-    Just future -> future
-    Nothing ->
-      forChoice (getStem verb) \stem ->
-        stem `append`
-          if endsInHardConsonant stem || endsInSoftConsonant stem then
-            "p"
-          else
-            case getStrength verb of
-              Weak   -> "v"
-              Strong -> "pp"
+  forChoice (getStem verb) \stem ->
+    stem `append`
+      if endsInHardConsonant stem || endsInSoftConsonant stem then
+        "p"
+      else
+        case getStrength verb of
+          Weak   -> "v"
+          Strong -> "pp"
 
 getFutureAdhu :: Verb -> ChoiceString
 getFutureAdhu verb =
@@ -366,11 +360,10 @@ conjugateFinite conjugation subject verb =
             _ ->
               Nothing
         isIrregular =
-          case (verbPast verb, getEnding $ verbRoot verb) of
-            (Just _, _)     -> True
-            (_, LongVowel)  -> True
-            (_, Alveolar L) -> True
-            _               -> False
+          case getEnding $ verbRoot verb of
+            LongVowel  -> True
+            Alveolar L -> True
+            _          -> False
       in
         if isIrregular then
           promote nadhu <> promote yadhu <> promote yitru

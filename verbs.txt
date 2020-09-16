@@ -28,11 +28,11 @@
 1S uDai. break
 
 # Class 2 Weak
-2W thaa. give. past thandh. stem tharu. resp thaarungaL
-2W vaa. come. past vandh. stem varu. resp vaarungaL
-2W pOdhu. be enough. defect. past pOndh, pOrndh
-2W en. say, quote. inf enn; enu
-2W kaaN. see. past kaND
+2W thaa. give. adv thandhu. stem tharu. resp thaarungaL
+2W vaa. come. adv vandhu. stem varu. resp vaarungaL
+2W pOdhu. be enough. defect. adv pOndhu, pOrndhu
+2W en. say, quote. inf enna; ena
+2W kaaN. see. adv kaNDu
 2W ezhu. get up, wake up
 2W koL. have, hold
 2W kol. kill
@@ -72,5 +72,5 @@
 3 vENDu. request, be wanted
 
 # Compound verbs
-2W koNDu vaa. bring. past vandh. stem varu. resp vaarungaL
+2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
 2W purindhu koL. understand
