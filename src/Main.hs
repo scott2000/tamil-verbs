@@ -1,5 +1,6 @@
 module Main where
 
+import TamilString
 import Verb
 import Request
 
@@ -39,15 +40,22 @@ main = do
       hFlush stdout
       words <$> getLine >>= \case
         [] -> return ()
-        (":load":pathParts) -> do
-          let path = unwords pathParts
-          verbList <- loadVerbList path
-          putStrLn $ "loaded '" ++ path ++ "' (" ++ count verbList ++ " verbs)"
+        (":parse":words) -> do
+          case mapM parseAndValidateTamil words of
+            Left err ->
+              putStrLn $ "invalid Tamil: " ++ err
+            Right words ->
+              putStrLn $ unwords (map toTamil words) ++ " (" ++ unwords (map toLatin words) ++ ")"
           startInteractive verbList
         (":export":pathParts) -> do
           let path = unwords pathParts
           exportVerbList path verbList
           putStrLn $ "exported " ++ count verbList ++ " verbs to '" ++ path ++ "'"
+          startInteractive verbList
+        (":load":pathParts) -> do
+          let path = unwords pathParts
+          verbList <- loadVerbList path
+          putStrLn $ "loaded '" ++ path ++ "' (" ++ count verbList ++ " verbs)"
           startInteractive verbList
         (":add":verbParts) ->
           case parseVerb (unwords verbParts) of
@@ -68,6 +76,7 @@ main = do
           putStrLn $ "reset to default verb list (" ++ count defaultVerbList ++ " verbs)"
           startInteractive defaultVerbList
         (":help":_) -> do
+          putStrLn ":parse <word>   parse the Tamil word and convert it to both alphabets"
           putStrLn ":export <file>  export the currently loaded verbs to a file"
           putStrLn ":load <file>    load a verb list from a file (replacing any loaded verbs)"
           putStrLn ":add <verb>     add a single verb"

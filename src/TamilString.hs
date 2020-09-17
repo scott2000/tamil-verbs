@@ -401,7 +401,10 @@ parseTamil str = TamilString <$> foldM convert [] str
           Consonant (Soft NAlveolar) : rest@(_ : _) ->
             -- Only when it's not the first letter
             Right $ Consonant (Soft NDental) : rest
-          Consonant _ : _ ->
+          Vowel (O Short) : rest ->
+            -- oh = O
+            Right $ Vowel (O Long) : rest
+          Consonant (Hard _) : _ ->
             Right str
           _ ->
             consonant $ Hard K
@@ -759,6 +762,15 @@ isValid str =
   case findError str of
     Just _ -> False
     Nothing -> True
+
+parseAndValidateTamil :: String -> Either String TamilString
+parseAndValidateTamil str =
+  case parseTamil str of
+    Left err -> Left $ show err
+    Right word ->
+      case findError word of
+        Just err -> Left err
+        Nothing -> Right word
 
 fromLetter :: TamilLetter -> TamilString
 fromLetter = TamilString . (: [])

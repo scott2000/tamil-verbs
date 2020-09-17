@@ -129,7 +129,8 @@ parseVerb s =
     checkValid kind unparsed str =
       case findError str of
         Nothing -> return ()
-        Just err -> Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
+        Just err ->
+          Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
     getRootInfo class_ prefix root = do
       verbClass <- parseClass class_
 
