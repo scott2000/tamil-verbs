@@ -176,7 +176,7 @@ parseVerb s =
             choiceStr <- replaceEnding "u" "infinitive" ["a"]
             Right (verbInfinitiveRoot verb, verb { verbInfinitiveRoot = Just choiceStr })
           "resp" -> do
-            choiceStr <- removeEnding "respectful command" ["m", "ngaL"]
+            choiceStr <- removeEnding "respectful command" ["ngaL", "m"]
             Right (verbRespectfulCommandRoot verb, verb { verbRespectfulCommandRoot = Just choiceStr })
           _ ->
             Left $ "invalid key: " ++ key
@@ -252,7 +252,7 @@ instance Show Verb where
         addKey "stem" verbStem $
         addKey "adhu" verbFutureAdhu $
         addKey "inf" ((|+ "a") <$> verbInfinitiveRoot) $
-        addKey "resp" ((|+ "m") <$> verbRespectfulCommandRoot) $
+        addKey "resp" ((|+ "ngaL") <$> verbRespectfulCommandRoot) $
         ""
 
 defaultVerb :: Verb
