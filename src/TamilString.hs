@@ -518,6 +518,9 @@ parseTamil str = TamilString <$> foldM convert [] str
               vowel current
         vowel v =
           case str of
+            Vowel (O Long) : rest ->
+              -- oha -> Oa -> oga
+              Right $ Vowel v : Consonant (Hard K) : Vowel (O Short) : rest
             Vowel _ : _ ->
               Left VowelHiatus
             _ ->
