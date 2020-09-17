@@ -329,24 +329,21 @@ getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
   getInfinitiveRootKind StemStrengthBased verb |+ "a"
 
-getRespectfulCommand :: Verb -> ChoiceString
-getRespectfulCommand verb =
-  case verbRespectfulCommand verb of
+getRespectfulCommandRoot :: Verb -> ChoiceString
+getRespectfulCommandRoot verb =
+  case verbRespectfulCommandRoot verb of
     Just command -> command
     Nothing ->
       let root = verbRoot verb in
       case verbClass verb of
         Class3 | endsInLongVowel root ->
-          let
-            basic = root `append` "ngaL"
-            alt = root `append` "gungaL"
-          in
-            if isSingleLetter root then
-              ChoiceString [alt] [basic]
-            else
-              ChoiceString [basic] [alt]
+          let alt = root `append` "gu" in
+          if isSingleLetter root then
+            ChoiceString [alt] [root]
+          else
+            ChoiceString [root] [alt]
         _ ->
-          common $ suffix root "ungaL"
+          common $ suffix root "u"
 
 data StemKind
   = StemStrengthBased
@@ -486,7 +483,8 @@ conjugatePositive conjugation verb =
     Command False ->
       getRoot verb
     Command True ->
-      getRespectfulCommand verb
+      let commandRoot = getRespectfulCommandRoot verb in
+      commandRoot |+ "ngaL" <> demote (commandRoot |+ "m")
 
 data NegativeConjugation
   = NegativePastPresent

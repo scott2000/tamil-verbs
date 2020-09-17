@@ -230,6 +230,8 @@ parseConjugationRequest parts = do
           return cr { crNegative = True }
         "resp" ->
           return cr { crRespectful = True }
+        "res" ->
+          return cr { crRespectful = True }
         "alt" ->
           return cr { crAlt = True }
         "adj" ->
@@ -237,6 +239,8 @@ parseConjugationRequest parts = do
         "rel" ->
           updateType TRRelative
         "adv" ->
+          updateType TRAdverb
+        "avp" ->
           updateType TRAdverb
         "inf" ->
           updateType TRInfinitive
@@ -564,13 +568,13 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       { verbRoot = "thaa"
       , verbAdverb = Just "thandhu"
       , verbStem = Just "tharu"
-      , verbRespectfulCommand = Just "thaarungaL"
+      , verbRespectfulCommandRoot = Just "thaaru"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
       , verbAdverb = Just "vandhu"
       , verbStem = Just "varu"
-      , verbRespectfulCommand = Just "vaarungaL"
+      , verbRespectfulCommandRoot = Just "vaaru"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "pOdhu"

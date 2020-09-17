@@ -140,11 +140,6 @@ parseVerb s =
       checkValid "verb" (prefix ++ " " ++ root) $ suffix verbPrefix verbRoot
 
       return defaultVerb { verbClass, verbPrefix, verbRoot }
-    removeA = \case
-      TamilString (Vowel (A Short) : rest) ->
-        Right $ TamilString (Vowel (U Short) : rest)
-      _ ->
-        Left $ "infinitive must end in " ++ show (A Short)
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"
       | otherwise          = Right verb { verbDefective = True }
@@ -153,31 +148,36 @@ parseVerb s =
     addFlag verb (key : strParts) = do
       choiceStr@(ChoiceString c u) <- parseChoiceString $ concat strParts
       let
-        assertEnding kind ending =
-          forM_ (c ++ u) \str ->
-            case stripSuffix ending str of
-              Just _ -> return ()
-              Nothing ->
-                Left $ kind ++ " must end in " ++ show ending
+        removeEnding = replaceEnding ""
+        replaceEnding newEnding kind endings =
+          ChoiceString <$> mapM go c <*> mapM go u
+          where
+            go str = foldl1' (<>) $ map (checkEnding str) endings
+            checkEnding str ending =
+              case stripSuffix ending str of
+                Just rest ->
+                  Right $ rest `append` newEnding
+                Nothing ->
+                  Left $ kind ++ " must end in " ++ intercalate " or " (map show endings)
       (old, verb) <-
         case key of
           "adv" ->
             if verbClass verb == Class3 then
               Left $ "adverb cannot be changed for class 3 verbs"
             else do
-              assertEnding "adverb" "u"
+              removeEnding "adverb" ["u"]
               Right (verbAdverb verb, verb { verbAdverb = Just choiceStr })
           "stem" -> do
             Right (verbStem verb, verb { verbStem = Just choiceStr })
           "adhu" -> do
-            assertEnding "future adhu" "m"
+            removeEnding "future adhu" ["m"]
             Right (verbFutureAdhu verb, verb { verbFutureAdhu = Just choiceStr })
           "inf" -> do
-            choiceStr <- ChoiceString <$> mapM removeA c <*> mapM removeA u
+            choiceStr <- replaceEnding "u" "infinitive" ["a"]
             Right (verbInfinitiveRoot verb, verb { verbInfinitiveRoot = Just choiceStr })
           "resp" -> do
-            assertEnding "respectful command" "ngaL"
-            Right (verbRespectfulCommand verb, verb { verbRespectfulCommand = Just choiceStr })
+            choiceStr <- removeEnding "respectful command" ["m", "ngaL"]
+            Right (verbRespectfulCommandRoot verb, verb { verbRespectfulCommandRoot = Just choiceStr })
           _ ->
             Left $ "invalid key: " ++ key
       case old of
@@ -220,7 +220,7 @@ data Verb = Verb
   , verbStem :: Maybe ChoiceString
   , verbFutureAdhu :: Maybe ChoiceString
   , verbInfinitiveRoot :: Maybe ChoiceString
-  , verbRespectfulCommand :: Maybe ChoiceString
+  , verbRespectfulCommandRoot :: Maybe ChoiceString
   , verbClass :: VerbClass }
 
 instance Eq Verb where
@@ -252,7 +252,7 @@ instance Show Verb where
         addKey "stem" verbStem $
         addKey "adhu" verbFutureAdhu $
         addKey "inf" ((|+ "a") <$> verbInfinitiveRoot) $
-        addKey "resp" verbRespectfulCommand $
+        addKey "resp" ((|+ "m") <$> verbRespectfulCommandRoot) $
         ""
 
 defaultVerb :: Verb
@@ -265,7 +265,7 @@ defaultVerb = Verb
   , verbStem = Nothing
   , verbFutureAdhu = Nothing
   , verbInfinitiveRoot = Nothing
-  , verbRespectfulCommand = Nothing
+  , verbRespectfulCommandRoot = Nothing
   , verbClass = undefined }
 
 getRoot :: Verb -> ChoiceString
@@ -386,14 +386,14 @@ defaultVerbList = makeVerbList
       , verbDefinitions = ["give"]
       , verbAdverb = Just "thandhu"
       , verbStem = Just "tharu"
-      , verbRespectfulCommand = Just "thaarungaL"
+      , verbRespectfulCommandRoot = Just "thaaru"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "vaa"
       , verbDefinitions = ["come"]
       , verbAdverb = Just "vandhu"
       , verbStem = Just "varu"
-      , verbRespectfulCommand = Just "vaarungaL"
+      , verbRespectfulCommandRoot = Just "vaaru"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "koL"
