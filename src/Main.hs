@@ -43,7 +43,7 @@ main = do
         (":parse":words) -> do
           case mapM parseAndValidateTamil words of
             Left err ->
-              putStrLn $ "invalid Tamil: " ++ err
+              putStrLn $ "error: " ++ err
             Right words ->
               putStrLn $ unwords (map toTamil words) ++ " (" ++ unwords (map toLatin words) ++ ")"
           startInteractive verbList
