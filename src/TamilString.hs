@@ -405,6 +405,10 @@ parseTamil str = TamilString <$> foldM convert [] str
             -- oh = O
             Right $ Vowel (O Long) : rest
           Consonant (Hard _) : _ ->
+            -- kh, ch, th, dh, bh, etc.
+            Right str
+          Consonant (Medium Zh) : _ ->
+            -- zh
             Right str
           _ ->
             consonant $ Hard K
