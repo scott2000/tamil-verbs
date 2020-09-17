@@ -7,6 +7,8 @@ import Control.Monad
 import Data.List
 import Data.Hashable
 
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 
@@ -290,19 +292,19 @@ getStrength verb =
     Class3   -> Weak
 
 data VerbList = VerbList
-  { allVerbs :: [Verb]
+  { allVerbs :: Set Verb
   , byRoot :: !(HashMap TamilString [Verb])
   , byDefinition :: !(HashMap String [Verb]) }
 
 emptyVerbList :: VerbList
 emptyVerbList = VerbList
-  { allVerbs = []
+  { allVerbs = Set.empty
   , byRoot = HashMap.empty
   , byDefinition = HashMap.empty }
 
 addVerb :: Verb -> VerbList -> VerbList
 addVerb basicVerb VerbList { allVerbs, byRoot, byDefinition } = VerbList
-  { allVerbs = v : allVerbs
+  { allVerbs = Set.insert v allVerbs
   , byRoot = insertAll (common (verbPrefix v) |+| getRoot v) byRoot
   , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
   where

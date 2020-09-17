@@ -35,6 +35,7 @@ executable tamil-verbs
                        mtl >=2.2,
                        transformers >=0.5,
                        optparse-applicative >=0.15,
+                       containers >= 0.6 && <0.7,
                        unordered-containers >=0.2.11,
                        hashable >=1.0.1.1
   hs-source-dirs:      src

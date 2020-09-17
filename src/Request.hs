@@ -7,7 +7,6 @@ import Conjugation
 import Control.Monad
 
 import Data.List
-import Data.Maybe
 import Data.Char
 
 import System.IO
@@ -440,7 +439,7 @@ lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either St
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup word $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (showTamil $ suffix (verbPrefix verb) (verbRoot verb), verb)) $ sort verbs
+      Right $ map (\verb -> (showTamil $ suffix (verbPrefix verb) (verbRoot verb), verb)) verbs
     Nothing ->
       let notDefinition = Left "cannot find word with that definition" in
       case parseTamil word of
@@ -454,7 +453,7 @@ lookupVerb verbList showTamil allowGuess word =
         Right tamil ->
           case HashMap.lookup tamil $ byRoot verbList of
             Just verbs ->
-              Right $ map (\verb -> (intercalate ", " $ verbDefinitions verb, verb)) $ sort verbs
+              Right $ map (\verb -> (intercalate ", " $ verbDefinitions verb, verb)) verbs
             Nothing ->
               case findError tamil of
                 Just err ->
@@ -510,14 +509,17 @@ processRequest verbList verb conjugation = do
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
         let
-          sortedVerbs = sortOn (\(_, v) -> v) verbs
-          conjugations = flip mapMaybe sortedVerbs \(header, verb) ->
-            case getConjugations request verb of
-              [] -> Nothing
-              conjugations -> Just (header, verb, conjugations)
-          allSingle = flip all conjugations \case
-            (_, _, [_]) -> True
-            _ -> False
+          sortedVerbs =
+            sortOn (\(_, v) -> v) verbs
+          conjugations =
+            map withConjugation sortedVerbs
+          withConjugation (header, verb) =
+            (header, verb, getConjugations request verb)
+          allSingle =
+            all isSingle conjugations
+          isSingle = \case
+            (_, _, _:_:_) -> False
+            _ -> True
         in
           forM_ conjugations \(header, verb, conjugations) ->
             case conjugations of

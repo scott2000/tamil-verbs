@@ -7,7 +7,7 @@ import System.IO
 import System.Exit
 import System.Environment
 
-import Data.List
+import qualified Data.Set as Set
 
 loadVerbList :: FilePath -> IO VerbList
 loadVerbList filePath = do
@@ -17,7 +17,7 @@ loadVerbList filePath = do
 
 exportVerbList :: FilePath -> VerbList -> IO ()
 exportVerbList filePath =
-  writeFile filePath . unlines . map show . sort . allVerbs
+  writeFile filePath . unlines . map show . Set.toAscList . allVerbs
 
 main :: IO ()
 main = do
@@ -59,7 +59,7 @@ main = do
               putStrLn $ "verb added (" ++ count verbList' ++ " verbs)"
               startInteractive verbList'
         (":list":_) -> do
-          mapM_ print $ sort $ allVerbs verbList
+          mapM_ print $ Set.toAscList $ allVerbs verbList
           startInteractive verbList
         (":clear":_) -> do
           putStrLn "cleared all loaded verbs"
