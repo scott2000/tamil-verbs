@@ -589,7 +589,7 @@ irregularVerbs = foldl' (flip addVerb) emptyVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "en"
-      , verbInfinitiveRoot = Just $ ChoiceString ["ennu", "enu"] []
+      , verbInfinitiveRoot = Just $ ChoiceString ["ennu"] ["enu"]
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "agal"

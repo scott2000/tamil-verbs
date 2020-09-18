@@ -262,6 +262,10 @@ getInfinitiveRoot verb =
     Strong ->
       plain <> demote (getInfinitiveRootKind StemStrengthBased verb)
 
+getInfinitive :: Verb -> ChoiceString
+getInfinitive verb =
+  getInfinitiveRootKind StemStrengthBased verb |+ "a"
+
 getNegativeFutureAdhu :: Verb -> ChoiceString
 getNegativeFutureAdhu verb =
   getInfinitiveRoot verb |+ "aadhu"
@@ -324,10 +328,6 @@ getAdverb verb =
         common $ suffix root "i"
     _ ->
       getPast verb |+ "u"
-
-getInfinitive :: Verb -> ChoiceString
-getInfinitive verb =
-  getInfinitiveRootKind StemStrengthBased verb |+ "a"
 
 getRespectfulCommandRoot :: Verb -> ChoiceString
 getRespectfulCommandRoot verb =
