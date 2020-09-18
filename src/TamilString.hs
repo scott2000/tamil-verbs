@@ -98,6 +98,13 @@ splitWith isBreak s =
       let (w, s'') = break isBreak s' in
       w : splitWith isBreak s''
 
+splitHyphen :: String -> [String]
+splitHyphen = splitWith \case
+  '-' -> True
+  ',' -> True
+  ' ' -> True
+  _   -> False
+
 split :: Char -> String -> [String]
 split = splitWith . (==)
 

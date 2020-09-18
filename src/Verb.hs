@@ -117,7 +117,7 @@ parseVerb s =
           _ ->
             Left "expected 'CLASS [PREFIX] ROOT' for first section of verb"
       verb <-
-        case map (stripTo . unwords . words) $ split ',' definitions of
+        case map (stripTo . unwords . splitHyphen) $ split ',' definitions of
           [] ->
             Left "expected at least one definition in second section of verb"
           verbDefinitions ->

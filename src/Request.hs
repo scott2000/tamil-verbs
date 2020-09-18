@@ -531,13 +531,6 @@ processRequest verbList verb conjugation = do
                 forM_ conjugations \conjugation ->
                   putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
-splitHyphen :: String -> [String]
-splitHyphen = splitWith \case
-  '-' -> True
-  ',' -> True
-  ' ' -> True
-  _   -> False
-
 irregularVerbs :: VerbList
 irregularVerbs = foldl' (flip addVerb) emptyVerbList
   [ defaultVerb
