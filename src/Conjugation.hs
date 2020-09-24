@@ -46,14 +46,23 @@ allThirdPersonSubjects =
   [ Avan, Aval, Avar, Avargal ]
   ++ map Irrational allIrrationalSubjects
 
-relativeSuffix :: ThirdPersonSubject -> ChoiceString
-relativeSuffix = \case
-  Avan ->
-    ChoiceString ["avan"] ["On"]
-  Avar ->
-    ChoiceString ["avar"] ["Or"]
+vRelativeSuffix :: ThirdPersonSubject -> ChoiceString
+vRelativeSuffix = \case
+  Avan            -> "On"
+  Avar            -> "Or"
+  Irrational Adhu -> "adhu"
+  _               -> mempty
+
+pRelativeSuffix :: ThirdPersonSubject -> ChoiceString
+pRelativeSuffix = \case
+  Irrational Adhu ->
+    mempty
   other ->
     common $ tamilShow other
+
+relativeSuffix :: ThirdPersonSubject -> ChoiceString
+relativeSuffix subject =
+  promote $ pRelativeSuffix subject <> demote (vRelativeSuffix subject)
 
 instance TamilShow ThirdPersonSubject where
   tamilShow = \case
@@ -437,18 +446,22 @@ conjugateFinite conjugation subject verb =
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
-getRelative :: FiniteConjugation -> Verb -> ChoiceString
-getRelative conjugation verb =
+conjugateRelative :: FiniteConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
+conjugateRelative conjugation subject verb =
   case conjugation of
     Past
       | verbClass verb == Class3 ->
-        getClass3PastNYForm verb
+        getClass3PastNYForm verb |+| subjectSuffix
       | otherwise ->
-        getPast verb
+        getPast verb |+| subjectSuffix
     Present ->
-      getPresent verb False
+      getPresent verb False |+| subjectSuffix
     Future ->
-      oneOrTwoOnStem P verb
+      promote $
+        oneOrTwoOnStem P verb |+| pRelativeSuffix subject
+        <> getFuture verb |+| demote (vRelativeSuffix subject)
+  where
+    subjectSuffix = relativeSuffix subject
 
 type Respectful = Bool
 
@@ -472,10 +485,8 @@ conjugatePositive conjugation verb =
           TamilString rest
         other ->
           other
-    Relative Future (Irrational Adhu) ->
-      getNounAdhu verb
     Relative finite subject ->
-      getRelative finite verb |+| relativeSuffix subject
+      conjugateRelative finite subject verb
     Adverb ->
       getAdverb verb
     Noun ->
