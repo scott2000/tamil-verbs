@@ -195,11 +195,12 @@ parseConjugationRequest parts = do
     ConjugationRequest { crRespectful = True } -> do
       hPutStrLn stderr "error: only commands can be made respectful"
       return request { crError = True }
+    ConjugationRequest { crNegative = False, crTense = Just TRClassical } -> do
+      hPutStrLn stderr "error: classical can only be used with the negative"
+      return request { crError = True }
     ConjugationRequest { crType = Just ty, crTense = Just TRClassical } -> do
       hPutStrLn stderr $ "error: " ++ show ty ++ " cannot be made classical"
       return request { crError = True }
-    ConjugationRequest { crNegative = False, crTense = Just TRClassical } ->
-      return request { crNegative = True }
     ConjugationRequest { crType = Just TRRelative, crSubject = Just (Third _) } ->
       return request
     ConjugationRequest { crType = Just TRRelative, crSubject = Just _ } -> do
