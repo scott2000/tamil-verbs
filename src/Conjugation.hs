@@ -341,10 +341,6 @@ getNegativeFutureAdhuRoot :: Verb -> ChoiceString
 getNegativeFutureAdhuRoot verb =
   getInfinitiveRoot verb <> demote (getRespectfulCommandRoot verb)
 
-getNegativeFutureAvai :: Verb -> ChoiceString
-getNegativeFutureAvai verb =
-  getNegativeFutureAdhuRoot verb |+| ("aadhu" <> uncommon "aa")
-
 getNounAdhu :: Verb -> ChoiceString
 getNounAdhu = conjugateRelative Future $ Irrational Adhu
 
@@ -482,7 +478,7 @@ conjugatePositive conjugation verb =
     Noun ->
       getNounAdhu verb <> getNounThal verb <> getNounKai verb <> getNounAl verb
     Conditional ->
-      getPast verb |+ "aal"
+      getPast verb |+ "aal" <> demote (getInfinitiveRoot verb |+| ("il" <> "in"))
     Command False ->
       getRoot verb
     Command True ->
@@ -509,21 +505,21 @@ conjugateNegative conjugation verb =
     NegativeFuture (Third (Irrational Adhu)) ->
       getNegativeFutureAdhuRoot verb |+ "aadhu"
     NegativeFuture (Third (Irrational Avai)) ->
-      getNegativeFutureAvai verb
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadhu"] ["aa"]
     NegativeFuture subject ->
       getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
     NegativeHabitual ->
       getNounAdhu verb |+ "illai"
     NegativeAdjective ->
-      getNegativeFutureAdhuRoot verb |+| ("aadha" <> "aa")
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadha"] ["aa"]
     NegativeRelative subject ->
       getNegativeFutureAdhuRoot verb |+ "aadhu" |+| relativeSuffix subject
     NegativeNoun ->
-      getNegativeFutureAdhuRoot verb |+| ("aadhadhu" <> "aamai")
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadhadhu"] ["aamai"]
     NegativeAdverb ->
-      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAvai verb)
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aamal"] ["aadhu", "aa"]
     NegativeConditional ->
-      getNegativeFutureAdhuRoot verb |+ "aaviTTaal"
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aa"] ["aamal"] |+| ChoiceString ["viTTaal"] ["viDil", "viDin"]
     NegativeCommand False ->
       getNegativeFutureAdhuRoot verb |+ "aadhE"
     NegativeCommand True ->

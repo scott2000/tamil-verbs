@@ -54,7 +54,7 @@ cs |+ s =
 
 (|+|) :: ChoiceString -> ChoiceString -> ChoiceString
 ChoiceString xc xu |+| ChoiceString yc yu =
-  ChoiceString cc (uc ++ cu ++ uu)
+  ChoiceString cc (cu ++ uc ++ uu)
   where
     suffix' = flip $ liftA2 $ flip suffix
     cc = suffix' xc yc
