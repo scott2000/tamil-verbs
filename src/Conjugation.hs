@@ -277,12 +277,7 @@ getInfinitive verb =
 
 getNegativeFutureAdhuRoot :: Verb -> ChoiceString
 getNegativeFutureAdhuRoot verb =
-  let inf = getInfinitiveRoot verb in
-  case getStrength verb of
-    Weak ->
-      inf <> demote (getRespectfulCommandRoot verb)
-    Strong ->
-      inf
+  getInfinitiveRoot verb <> demote (getRespectfulCommandRoot verb)
 
 getNegativeFutureAvai :: Verb -> ChoiceString
 getNegativeFutureAvai verb =
