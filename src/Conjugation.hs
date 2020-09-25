@@ -130,7 +130,7 @@ usingAvaiSuffix :: Subject -> (Bool -> ChoiceString) -> ChoiceString
 usingAvaiSuffix subject f =
   case subject of
     Third Avargal ->
-      (f False |+ "aargaL") <> (f True |+| common "ar")
+      (f False |+ "aargaL") <> (f True |+ "ar")
     Third (Irrational Avai) ->
       f True |+ "a"
     other ->
@@ -161,7 +161,7 @@ getPast verb =
           common $ suffix root "ndh"
         (Class3, LongVowel) ->
           ChoiceString [root `append` "n"] [suffix root "in", root `append` "gin"]
-        (Class3, Alveolar L) ->
+        (Class3, Alveolar L) | isShortish root ->
           ChoiceString [replaceLastLetter root "nn"] [suffix root "in"]
         (Class3, _) ->
           common $ suffix root "in"
@@ -269,7 +269,7 @@ getInfinitiveRoot verb =
   case getStrength verb of
     Weak -> plain
     Strong ->
-      plain <> demote (getInfinitiveRootKind StemStrengthBased verb)
+      getInfinitiveRootKind StemStrengthBased verb <> demote plain
 
 getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
@@ -312,11 +312,11 @@ getNounThal verb =
 
 getNounKai :: Verb -> ChoiceString
 getNounKai verb =
-  oneOrTwoOnStem K verb |+| common "ai"
+  oneOrTwoOnStem K verb |+ "ai"
 
 getNounAl :: Verb -> ChoiceString
 getNounAl verb =
-  getInfinitive verb |+| common "l"
+  getInfinitive verb |+ "l"
 
 getAdverb :: Verb -> ChoiceString
 getAdverb verb =
@@ -471,6 +471,7 @@ data PositiveConjugation
   | Relative FiniteConjugation ThirdPersonSubject
   | Noun
   | Adverb
+  | Conditional
   | Command Respectful
   deriving Show
 
@@ -491,6 +492,8 @@ conjugatePositive conjugation verb =
       getAdverb verb
     Noun ->
       getNounAdhu verb <> getNounThal verb <> getNounKai verb <> getNounAl verb
+    Conditional ->
+      getPast verb |+ "aal"
     Command False ->
       getRoot verb
     Command True ->
@@ -505,6 +508,7 @@ data NegativeConjugation
   | NegativeRelative ThirdPersonSubject
   | NegativeNoun
   | NegativeAdverb
+  | NegativeConditional
   | NegativeCommand Respectful
   deriving Show
 
@@ -526,9 +530,11 @@ conjugateNegative conjugation verb =
     NegativeRelative subject ->
       getNegativeFutureAdhu verb |+| relativeSuffix subject
     NegativeNoun ->
-      getNegativeFutureAdhu verb |+ "adhu" <> getInfinitiveRoot verb |+ "aamai"
+      getNegativeFutureAdhu verb |+ "adhu" <> demote (getInfinitiveRoot verb |+ "aamai")
     NegativeAdverb ->
-      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAdhu verb)
+      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAdhu verb <> getNegativeFutureAvai verb)
+    NegativeConditional ->
+      getNegativeFutureAvai verb |+ "viTTaal"
     NegativeCommand False ->
       getNegativeFutureAdhu verb |+ "E"
     NegativeCommand True ->

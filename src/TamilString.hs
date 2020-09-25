@@ -190,6 +190,20 @@ isShortishVowel = \case
   Au -> True
   v  -> isShortVowel v
 
+isShortish :: TamilString -> Bool
+isShortish (TamilString str) =
+  case str of
+    [Consonant _, Vowel v] ->
+      isShortishVowel v
+    [Consonant _, Vowel v, Consonant _] ->
+      isShortishVowel v
+    [Vowel v0, Consonant _, Vowel v1] ->
+      isShortishVowel v0 && isShortishVowel v1
+    [Vowel v0, Consonant _, Vowel v1, Consonant _] ->
+      isShortishVowel v0 && isShortishVowel v1
+    _ ->
+      False
+
 data Vallinam
   = K
   | Ch

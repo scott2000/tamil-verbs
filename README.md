@@ -56,6 +56,7 @@ Conjugate tamil verbs in various forms for different subjects
 - `adjective`: verbal adjective
 - `relative`: relative noun referring to someone who does the action
 - `noun`: verbal noun referring to the action of the verb
+- `conditional`/`if`: conditional clauses like "if" in English
 - `command`: imperative command
 - `negative`: make the conjugation negative
 - `respectful`: make the conjugation respectful (for `command`)
@@ -173,6 +174,7 @@ on the ending of the verb root.
 
 | Special Case | Example | Past | Past Example | Future | Future Example |
 | --- | --- | --- | --- | --- | --- |
-| -ல் | சொல் | ன்ன்- | சொன்னேன் | -வ்- | சொல்வேன் |
-| *other* | பேசு | -இன் | பேசினேன் | -வ்- | பேசுவேன் |
+| -ல் *(short)* | சொல் | ன்ன்- | சொன்னேன் | -வ்- | சொல்வேன் |
+| -*(long vowel)* | ஆ (ஆகு) | -ன்- | ஆனேன் | -வ்- | ஆவேன் |
+| *other* | பேசு | -இன்- | பேசினேன் | -வ்- | பேசுவேன் |
 

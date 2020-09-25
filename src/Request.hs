@@ -19,17 +19,19 @@ data TypeRequest
   | TRNoun
   | TRAdverb
   | TRInfinitive
+  | TRConditional
   | TRCommand
   deriving Eq
 
 instance Show TypeRequest where
   show = \case
-    TRAdjective  -> "adjective"
-    TRRelative   -> "relative"
-    TRNoun       -> "noun"
-    TRAdverb     -> "adverb"
-    TRInfinitive -> "infinitive"
-    TRCommand    -> "command"
+    TRAdjective   -> "adjective"
+    TRRelative    -> "relative"
+    TRNoun        -> "noun"
+    TRAdverb      -> "adverb"
+    TRInfinitive  -> "infinitive"
+    TRConditional -> "conditional"
+    TRCommand     -> "command"
 
 data TenseRequest
   = TRPast
@@ -112,6 +114,8 @@ getConjugations cr verb =
           [Negative NegativeAdverb]
         Just TRInfinitive ->
           [Negative NegativePastPresent]
+        Just TRConditional ->
+          [Negative NegativeConditional]
         Just TRCommand ->
           [Negative $ NegativeCommand False]
         Nothing ->
@@ -134,6 +138,8 @@ getConjugations cr verb =
           [Positive Adverb]
         Just TRInfinitive -> do
           [Infinitive]
+        Just TRConditional ->
+          [Positive Conditional]
         Just TRCommand ->
           [Positive $ Command False]
         Nothing
@@ -209,6 +215,8 @@ parseConjugationRequest parts = do
           updateType TRAdverb
         "infinitive" ->
           updateType TRInfinitive
+        "conditional" ->
+          updateType TRConditional
         "command" ->
           updateType TRCommand
         "past" ->
@@ -243,6 +251,8 @@ parseConjugationRequest parts = do
           updateType TRAdverb
         "inf" ->
           updateType TRInfinitive
+        "cond" ->
+          updateType TRConditional
         "com" ->
           updateType TRCommand
         "pres" ->
@@ -267,6 +277,8 @@ parseConjugationRequest parts = do
           updateType TRAdverb
         "i" ->
           updateType TRInfinitive
+        "if" ->
+          updateType TRConditional
         "c" ->
           updateType TRCommand
         "p" ->
@@ -324,7 +336,7 @@ guessNoInfo str =
     Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
       [basicClass $ Class1 Strong]
     _
-      | isShort ->
+      | isShortish reducedRoot ->
         case reducedStr of
           Vowel (U Short) : Consonant (Hard K) : Vowel _ : _ ->
             [basicClass $ Class1 Weak]
@@ -396,18 +408,6 @@ guessNoInfo str =
           , verbPrefix = prefixRoot
           , verbDefective = True
           , verbClass = Class2 Weak } )
-    isShort =
-      case reducedStr of
-        [Consonant _, Vowel v] ->
-          isShortishVowel v
-        [Consonant _, Vowel v, Consonant _] ->
-          isShortishVowel v
-        [Vowel v0, Consonant _, Vowel v1] ->
-          isShortishVowel v0 && isShortishVowel v1
-        [Vowel v0, Consonant _, Vowel v1, Consonant _] ->
-          isShortishVowel v0 && isShortishVowel v1
-        _ ->
-          False
 
 guess :: VerbList -> TamilString -> [(String, Verb)]
 guess verbList basicRoot =
@@ -437,7 +437,7 @@ guess verbList basicRoot =
 
 lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either String [(String, Verb)]
 lookupVerb verbList showTamil allowGuess word =
-  case HashMap.lookup word $ byDefinition verbList of
+  case HashMap.lookup (map toLower word) $ byDefinition verbList of
     Just verbs ->
       Right $ map (\verb -> (showTamil $ suffix (verbPrefix verb) (verbRoot verb), verb)) verbs
     Nothing ->

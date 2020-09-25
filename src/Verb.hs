@@ -5,6 +5,7 @@ import TamilString
 import Control.Monad
 
 import Data.List
+import Data.Char
 import Data.Hashable
 
 import Data.Set (Set)
@@ -117,7 +118,7 @@ parseVerb s =
           _ ->
             Left "expected 'CLASS [PREFIX] ROOT' for first section of verb"
       verb <-
-        case map (stripTo . unwords . splitHyphen) $ split ',' definitions of
+        case map (stripTo . map toLower . unwords . splitHyphen) $ split ',' definitions of
           [] ->
             Left "expected at least one definition in second section of verb"
           verbDefinitions ->
