@@ -275,17 +275,21 @@ getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
   getInfinitiveRootKind StemStrengthBased verb |+ "a"
 
-getNegativeFutureAdhu :: Verb -> ChoiceString
-getNegativeFutureAdhu verb =
-  getInfinitiveRoot verb |+ "aadhu"
+getNegativeFutureAdhuRoot :: Verb -> ChoiceString
+getNegativeFutureAdhuRoot verb =
+  let inf = getInfinitiveRoot verb in
+  case getStrength verb of
+    Weak ->
+      inf <> demote (getRespectfulCommandRoot verb)
+    Strong ->
+      inf
 
 getNegativeFutureAvai :: Verb -> ChoiceString
 getNegativeFutureAvai verb =
-  getInfinitiveRoot verb |+ "aa"
+  getNegativeFutureAdhuRoot verb |+| ("aadhu" <> uncommon "aa")
 
 getNounAdhu :: Verb -> ChoiceString
-getNounAdhu verb =
-  getFuture verb |+ "adhu"
+getNounAdhu = conjugateRelative Future $ Irrational Adhu
 
 getNounThal :: Verb -> ChoiceString
 getNounThal verb =
@@ -364,7 +368,8 @@ getStemKind kind verb =
     StemStrengthBased ->
       case strength of
         Weak -> plain
-        Strong -> sub
+        Strong ->
+          common sub
     StemPlain -> plain
   where
     strength = getStrength verb
@@ -373,14 +378,14 @@ getStemKind kind verb =
         Just stem -> stem
         Nothing -> getRoot verb
     sub =
-      forChoice plain \stem ->
-        case getEnding stem of
-          Retroflex L ->
-            replaceLastLetter stem "T"
-          Alveolar L ->
-            replaceLastLetter stem "R"
-          _ ->
-            stem
+      let stem = collapse plain in
+      case getEnding stem of
+        Retroflex L ->
+          replaceLastLetter stem "T"
+        Alveolar L ->
+          replaceLastLetter stem "R"
+        _ ->
+          stem
 
 getStem :: Verb -> ChoiceString
 getStem = getStemKind StemStrengthBased
@@ -518,27 +523,27 @@ conjugateNegative conjugation verb =
     NegativePastPresent ->
       getInfinitive verb |+ "illai"
     NegativeFuture (Third (Irrational Adhu)) ->
-      getNegativeFutureAdhu verb
+      getNegativeFutureAdhuRoot verb |+ "aadhu"
     NegativeFuture (Third (Irrational Avai)) ->
-      getNegativeFutureAdhu verb <> demote (getNegativeFutureAvai verb)
+      getNegativeFutureAvai verb
     NegativeFuture subject ->
       getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
     NegativeHabitual ->
       getNounAdhu verb |+ "illai"
     NegativeAdjective ->
-      getNegativeFutureAdhu verb |+ "a" <> getNegativeFutureAvai verb
+      getNegativeFutureAdhuRoot verb |+| ("aadha" <> "aa")
     NegativeRelative subject ->
-      getNegativeFutureAdhu verb |+| relativeSuffix subject
+      getNegativeFutureAdhuRoot verb |+ "aadhu" |+| relativeSuffix subject
     NegativeNoun ->
-      getNegativeFutureAdhu verb |+ "adhu" <> demote (getInfinitiveRoot verb |+ "aamai")
+      getNegativeFutureAdhuRoot verb |+| ("aadhadhu" <> "aamai")
     NegativeAdverb ->
-      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAdhu verb <> getNegativeFutureAvai verb)
+      getInfinitiveRoot verb |+ "aamal" <> demote (getNegativeFutureAvai verb)
     NegativeConditional ->
-      getNegativeFutureAvai verb |+ "viTTaal"
+      getNegativeFutureAdhuRoot verb |+ "aaviTTaal"
     NegativeCommand False ->
-      getNegativeFutureAdhu verb |+ "E"
+      getNegativeFutureAdhuRoot verb |+ "aadhE"
     NegativeCommand True ->
-      getNegativeFutureAdhu verb |+ "eergaL"
+      getNegativeFutureAdhuRoot verb |+ "aadheergaL"
 
 data Conjugation
   = Positive PositiveConjugation
