@@ -38,14 +38,16 @@ data TenseRequest
   | TRPresent
   | TRFuture
   | TRHabitual
+  | TRClassical
   deriving Eq
 
 instance Show TenseRequest where
   show = \case
-    TRPast     -> "past"
-    TRPresent  -> "present"
-    TRFuture   -> "future"
-    TRHabitual -> "habitual"
+    TRPast      -> "past"
+    TRPresent   -> "present"
+    TRFuture    -> "future"
+    TRHabitual  -> "habitual"
+    TRClassical -> "classical"
 
 data TamilOrLatin
   = TRTamil
@@ -124,6 +126,8 @@ getConjugations cr verb =
               [Negative $ NegativeFuture subject]
             Just TRHabitual ->
               [Negative NegativeHabitual]
+            Just TRClassical ->
+              [Negative $ NegativeClassical subject]
             _ ->
               [Negative NegativePastPresent]
     parsePositive =
@@ -154,8 +158,7 @@ getConjugations cr verb =
           case crTense cr of
             Just TRPast -> [Past]
             Just TRPresent -> [Present]
-            Just TRFuture -> [Future]
-            Just TRHabitual -> [Future]
+            Just _ -> [Future]
             Nothing
               | defective -> [Future]
               | otherwise -> [Past, Present, Future]
@@ -182,9 +185,21 @@ parseConjugationRequest parts = do
       return request { crType = Just TRCommand }
     ConjugationRequest { crRespectful = True, crType = Just TRCommand } ->
       return request
+    ConjugationRequest { crRespectful = True, crSubject = Just subject } ->
+      case makeRespectful subject of
+        Just subject ->
+          return request { crSubject = Just subject}
+        Nothing -> do
+          hPutStrLn stderr $ "error: subject cannot be made respectful: " ++ show (tamilShow subject)
+          return request { crError = True }
     ConjugationRequest { crRespectful = True } -> do
-      hPutStrLn stderr "warning: only commands can be made respectful"
-      return request
+      hPutStrLn stderr "error: only commands can be made respectful"
+      return request { crError = True }
+    ConjugationRequest { crType = Just ty, crTense = Just TRClassical } -> do
+      hPutStrLn stderr $ "error: " ++ show ty ++ " cannot be made classical"
+      return request { crError = True }
+    ConjugationRequest { crNegative = False, crTense = Just TRClassical } ->
+      return request { crNegative = True }
     ConjugationRequest { crType = Just TRRelative, crSubject = Just (Third _) } ->
       return request
     ConjugationRequest { crType = Just TRRelative, crSubject = Just _ } -> do
@@ -227,6 +242,12 @@ parseConjugationRequest parts = do
           updateTense TRFuture
         "habitual" ->
           updateTense TRHabitual
+        "classical" ->
+          updateTense TRClassical
+        "classic" ->
+          updateTense TRClassical
+        "ancient" ->
+          updateTense TRClassical
         "tamil" ->
           updateFormat TRTamil
         "latin" ->
@@ -236,6 +257,8 @@ parseConjugationRequest parts = do
         "neg" ->
           return cr { crNegative = True }
         "not" ->
+          return cr { crNegative = True }
+        "no" ->
           return cr { crNegative = True }
         "resp" ->
           return cr { crRespectful = True }
@@ -255,6 +278,8 @@ parseConjugationRequest parts = do
           updateType TRInfinitive
         "cond" ->
           updateType TRConditional
+        "if" ->
+          updateType TRConditional
         "com" ->
           updateType TRCommand
         "pres" ->
@@ -263,36 +288,38 @@ parseConjugationRequest parts = do
           updateTense TRFuture
         "hab" ->
           updateTense TRHabitual
+        "class" ->
+          updateTense TRClassical
+        "old" ->
+          updateTense TRClassical
         "tam" ->
           updateFormat TRTamil
         "lat" ->
           updateFormat TRLatin
         "eng" ->
           updateFormat TRLatin
-        "no" ->
-          return cr { crNegative = True }
-        "g" ->
-          return cr { crGuess = True }
-        "j" ->
-          updateType TRAdjective
-        "l" ->
-          updateType TRRelative
-        "v" ->
-          updateType TRAdverb
         "i" ->
-          updateType TRInfinitive
-        "if" ->
-          updateType TRConditional
-        "c" ->
-          updateType TRCommand
-        "p" ->
-          updateTense TRPast
-        "r" ->
-          updateTense TRPresent
-        "f" ->
-          updateTense TRFuture
-        "h" ->
-          updateTense TRHabitual
+          updateSubject Naan
+        "we" ->
+          updateSubject Naam
+        "you" ->
+          updateSubject Nee
+        "he" ->
+          updateSubject $ Third Avan
+        "she" ->
+          updateSubject $ Third Aval
+        "they" ->
+          updateSubject $ Third Avargal
+        "it" ->
+          updateSubject $ Third $ Irrational Adhu
+        "that" ->
+          updateSubject $ Third $ Irrational Adhu
+        "this" ->
+          updateSubject $ Third $ Irrational Adhu
+        "these" ->
+          updateSubject $ Third $ Irrational Avai
+        "those" ->
+          updateSubject $ Third $ Irrational Avai
         other ->
           case
             case parseTamil other of

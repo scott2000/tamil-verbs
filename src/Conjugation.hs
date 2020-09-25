@@ -5,6 +5,7 @@ module Conjugation
   , allThirdPersonSubjects
   , Subject (..)
   , allSubjects
+  , makeRespectful
   , TenseConjugation (..)
   , PositiveConjugation (..)
   , NegativeConjugation (..)
@@ -103,6 +104,18 @@ allSubjects =
   [ Naan, Naam, Naangal
   , Nee, Neer, Neengal ]
   ++ map Third allThirdPersonSubjects
+
+makeRespectful :: Subject -> Maybe Subject
+makeRespectful = \case
+  Naam -> Just Naangal
+  Nee -> Just Neengal
+  Neer -> Just Neengal
+  Neengal -> Just Neengal
+  Third Avan -> Just $ Third Avar
+  Third Aval -> Just $ Third Avar
+  Third Avar -> Just $ Third Avar
+  Third Avargal -> Just $ Third Avargal
+  _ -> Nothing
 
 simpleSuffix :: Subject -> TamilString
 simpleSuffix = \case
@@ -341,6 +354,15 @@ getNegativeFutureAdhuRoot :: Verb -> ChoiceString
 getNegativeFutureAdhuRoot verb =
   getInfinitiveRoot verb <> demote (getRespectfulCommandRoot verb)
 
+getNegativeFutureIrrational :: IrrationalSubject -> Verb -> ChoiceString
+getNegativeFutureIrrational subject verb =
+  let root = getNegativeFutureAdhuRoot verb in
+  case subject of
+    Adhu ->
+      root |+ "aadhu"
+    Avai ->
+      root |+| ChoiceString ["aadhu"] ["aa"]
+
 getNounAdhu :: Verb -> ChoiceString
 getNounAdhu = conjugateRelative Future $ Irrational Adhu
 
@@ -489,6 +511,7 @@ data NegativeConjugation
   = NegativePastPresent
   | NegativeFuture Subject
   | NegativeHabitual
+  | NegativeClassical Subject
   | NegativeAdjective
   | NegativeRelative ThirdPersonSubject
   | NegativeNoun
@@ -502,14 +525,16 @@ conjugateNegative conjugation verb =
   case conjugation of
     NegativePastPresent ->
       getInfinitive verb |+ "illai"
-    NegativeFuture (Third (Irrational Adhu)) ->
-      getNegativeFutureAdhuRoot verb |+ "aadhu"
-    NegativeFuture (Third (Irrational Avai)) ->
-      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadhu"] ["aa"]
+    NegativeFuture (Third (Irrational irrational)) ->
+      getNegativeFutureIrrational irrational verb
     NegativeFuture subject ->
       getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
     NegativeHabitual ->
       getNounAdhu verb |+ "illai"
+    NegativeClassical (Third (Irrational irrational)) ->
+      getNegativeFutureIrrational irrational verb
+    NegativeClassical subject ->
+      getRespectfulCommandRoot verb |+ simpleSuffix subject
     NegativeAdjective ->
       getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadha"] ["aa"]
     NegativeRelative subject ->
