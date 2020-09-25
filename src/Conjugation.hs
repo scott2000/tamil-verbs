@@ -5,7 +5,7 @@ module Conjugation
   , allThirdPersonSubjects
   , Subject (..)
   , allSubjects
-  , FiniteConjugation (..)
+  , TenseConjugation (..)
   , PositiveConjugation (..)
   , NegativeConjugation (..)
   , Conjugation (..)
@@ -166,6 +166,79 @@ getPast verb =
         (Class3, _) ->
           common $ suffix root "in"
 
+getClass3PastNYForm :: Verb -> ChoiceString
+getClass3PastNYForm verb =
+  let
+    past = getPast verb
+    withY =
+      filterMapChoice past \case
+        TamilString (Consonant (Soft NAlveolar) : rest@(Vowel _ : _)) ->
+          Just $ TamilString (Consonant (Medium Y) : rest)
+        _ ->
+          Nothing
+    isIrregular =
+      case getEnding $ verbRoot verb of
+        LongVowel  -> True
+        Alveolar L -> True
+        _          -> False
+  in
+    if isIrregular then
+      promote past <> promote withY
+    else
+      promote withY <> promote past
+
+getAdverb :: Verb -> ChoiceString
+getAdverb verb =
+  case verbClass verb of
+    Class3 ->
+      let root = verbRoot verb in
+      if endsInLongVowel root then
+        let
+          y = root `append` "y"
+          gi = root `append` "gi"
+          yi = root `append` "yi"
+        in
+          if isSingleLetter root then
+            ChoiceString [gi, y] [yi]
+          else
+            ChoiceString [y] [yi, gi]
+      else
+        common $ suffix root "i"
+    _ ->
+      getPast verb |+ "u"
+
+data StemKind
+  = StemStrengthBased
+  | StemPlain
+
+getStemKind :: StemKind -> Verb -> ChoiceString
+getStemKind kind verb =
+  case kind of
+    StemStrengthBased ->
+      case strength of
+        Weak -> plain
+        Strong ->
+          common sub
+    StemPlain -> plain
+  where
+    strength = getStrength verb
+    plain =
+      case verbStem verb of
+        Just stem -> stem
+        Nothing -> getRoot verb
+    sub =
+      let stem = collapse plain in
+      case getEnding stem of
+        Retroflex L ->
+          replaceLastLetter stem "T"
+        Alveolar L ->
+          replaceLastLetter stem "R"
+        _ ->
+          stem
+
+getStem :: Verb -> ChoiceString
+getStem = getStemKind StemStrengthBased
+
 oneOrTwoOnStem :: Vallinam -> Verb -> ChoiceString
 oneOrTwoOnStem hard verb =
   forChoice (getStem verb) \stem ->
@@ -183,17 +256,6 @@ getPresent verb avai =
     oneOrTwoOnStem K verb |+ "indRan"
   else
     oneOrTwoOnStem K verb |+| ChoiceString ["iR"] ["indR"]
-
-{-
-
-Special Rules:
-
-Vallinam or long vowel ending => -க infinitive
-Vallinam or mellinam ending   => -ப- future
-
-Class 3 with long vowel ending => -ன் - past, -ய் adverb, -ங்கள் command
-
--}
 
 getFuture :: Verb -> ChoiceString
 getFuture verb =
@@ -317,26 +379,6 @@ getNounAl :: Verb -> ChoiceString
 getNounAl verb =
   getInfinitive verb |+ "l"
 
-getAdverb :: Verb -> ChoiceString
-getAdverb verb =
-  case verbClass verb of
-    Class3 ->
-      let root = verbRoot verb in
-      if endsInLongVowel root then
-        let
-          y = root `append` "y"
-          gi = root `append` "gi"
-          yi = root `append` "yi"
-        in
-          if isSingleLetter root then
-            ChoiceString [gi, y] [yi]
-          else
-            ChoiceString [y] [yi, gi]
-      else
-        common $ suffix root "i"
-    _ ->
-      getPast verb |+ "u"
-
 getRespectfulCommandRoot :: Verb -> ChoiceString
 getRespectfulCommandRoot verb =
   case verbRespectfulCommandRoot verb of
@@ -353,68 +395,15 @@ getRespectfulCommandRoot verb =
         _ ->
           common $ suffix root "u"
 
-data StemKind
-  = StemStrengthBased
-  | StemPlain
-
-getStemKind :: StemKind -> Verb -> ChoiceString
-getStemKind kind verb =
-  case kind of
-    StemStrengthBased ->
-      case strength of
-        Weak -> plain
-        Strong ->
-          common sub
-    StemPlain -> plain
-  where
-    strength = getStrength verb
-    plain =
-      case verbStem verb of
-        Just stem -> stem
-        Nothing -> getRoot verb
-    sub =
-      let stem = collapse plain in
-      case getEnding stem of
-        Retroflex L ->
-          replaceLastLetter stem "T"
-        Alveolar L ->
-          replaceLastLetter stem "R"
-        _ ->
-          stem
-
-getStem :: Verb -> ChoiceString
-getStem = getStemKind StemStrengthBased
-
-data FiniteConjugation
+data TenseConjugation
   = Past
   | Present
   | Future
   deriving Show
 
-getClass3PastNYForm :: Verb -> ChoiceString
-getClass3PastNYForm verb =
-  let
-    past = getPast verb
-    withY =
-      filterMapChoice past \case
-        TamilString (Consonant (Soft NAlveolar) : rest@(Vowel _ : _)) ->
-          Just $ TamilString (Consonant (Medium Y) : rest)
-        _ ->
-          Nothing
-    isIrregular =
-      case getEnding $ verbRoot verb of
-        LongVowel  -> True
-        Alveolar L -> True
-        _          -> False
-  in
-    if isIrregular then
-      promote past <> promote withY
-    else
-      promote withY <> promote past
-
-conjugateFinite :: FiniteConjugation -> Subject -> Verb -> ChoiceString
-conjugateFinite conjugation subject verb =
-  case (conjugation, verbClass verb, subject) of
+conjugateFinite :: TenseConjugation -> Subject -> Verb -> ChoiceString
+conjugateFinite tense subject verb =
+  case (tense, verbClass verb, subject) of
     (Past, Class3, Third (Irrational Adhu)) ->
       let
         ny = getClass3PastNYForm verb
@@ -446,9 +435,9 @@ conjugateFinite conjugation subject verb =
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
-conjugateRelative :: FiniteConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
-conjugateRelative conjugation subject verb =
-  case conjugation of
+conjugateRelative :: TenseConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
+conjugateRelative tense subject verb =
+  case tense of
     Past
       | verbClass verb == Class3 ->
         getClass3PastNYForm verb |+| subjectSuffix
@@ -466,9 +455,9 @@ conjugateRelative conjugation subject verb =
 type Respectful = Bool
 
 data PositiveConjugation
-  = Finite FiniteConjugation Subject
-  | Adjective FiniteConjugation
-  | Relative FiniteConjugation ThirdPersonSubject
+  = Finite TenseConjugation Subject
+  | Adjective TenseConjugation
+  | Relative TenseConjugation ThirdPersonSubject
   | Noun
   | Adverb
   | Conditional
@@ -478,16 +467,16 @@ data PositiveConjugation
 conjugatePositive :: PositiveConjugation -> Verb -> ChoiceString
 conjugatePositive conjugation verb =
   case conjugation of
-    Finite finite subject ->
-      conjugateFinite finite subject verb
-    Adjective finite ->
-      forChoice (conjugateFinite finite (Third (Irrational Adhu)) verb) \case
+    Finite tense subject ->
+      conjugateFinite tense subject verb
+    Adjective tense ->
+      forChoice (conjugateFinite tense (Third (Irrational Adhu)) verb) \case
         TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->
           TamilString rest
         other ->
           other
-    Relative finite subject ->
-      conjugateRelative finite subject verb
+    Relative tense subject ->
+      conjugateRelative tense subject verb
     Adverb ->
       getAdverb verb
     Noun ->
