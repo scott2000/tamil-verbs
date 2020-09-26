@@ -4,6 +4,8 @@ import TamilString
 import Verb
 import Request
 
+import Control.Monad
+
 import System.IO
 import System.Exit
 import System.Environment
@@ -45,29 +47,29 @@ main = do
         [] -> return ()
         (":parse":words) -> do
           let
-            isWordChar c = isAlpha c || isMark c
-            skipSpecial [] = ("", "")
+            isWordChar c = isAlpha c || isMark c || c == '~'
+            skipSpecial [] = ("", "", "")
             skipSpecial str =
               let
                 (special, specialRest) = span (not . isWordChar) str
                 (alpha, alphaRest) = span isWordChar specialRest
-                (t, l) =
+                (t, l, e) =
                   case parseTamil alpha of
-                    Left _ ->
-                      (alpha, alpha)
+                    Left err ->
+                      (alpha, alpha, "error: " ++ err ++ "\n")
                     Right word ->
-                      (toTamil word, toLatin word)
-                (ts, ls) = skipSpecial alphaRest
+                      (toTamil word, toLatin word, "")
+                (ts, ls, es) = skipSpecial alphaRest
               in
-                (special ++ t ++ ts, special ++ l ++ ls)
-            (t, l) = skipSpecial $ unwords words
-          if t == l then
-            putStrLn "error: no valid Tamil words found"
-          else if length l < 40 then
-            putStrLn $ t ++ " (" ++ l ++ ")"
-          else do
-            putStrLn t
-            putStrLn l
+                (special ++ t ++ ts, special ++ l ++ ls, e ++ es)
+            (t, l, e) = skipSpecial $ unwords words
+          putStr e
+          when (t /= l)
+            if length l < 40 then
+              putStrLn $ t ++ " (" ++ l ++ ")"
+            else do
+              putStrLn t
+              putStrLn l
           startInteractive verbList
         (":guess":words) -> do
           case mapM parseAndValidateTamil words of
