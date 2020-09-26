@@ -361,7 +361,7 @@ getNegativeFutureIrrational subject verb =
     Adhu ->
       root |+ "aadhu"
     Avai ->
-      root |+| ChoiceString ["aadhu"] ["aa"]
+      root |+| ("aadhu" <> "aa")
 
 getNounAdhu :: Verb -> ChoiceString
 getNounAdhu = conjugateRelative Future $ Irrational Adhu

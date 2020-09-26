@@ -129,7 +129,11 @@ getConjugations cr verb =
             Just TRClassical ->
               [Negative $ NegativeClassical subject]
             _ ->
-              [Negative NegativePastPresent]
+              case crSubject cr of
+                Just subject ->
+                  [Negative $ NegativeFuture subject]
+                Nothing ->
+                  [Negative NegativePastPresent]
     parsePositive =
       case crType cr of
         Just TRAdjective ->
