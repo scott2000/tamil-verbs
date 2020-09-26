@@ -520,6 +520,16 @@ data NegativeConjugation
   | NegativeCommand Respectful
   deriving Show
 
+maaTTu :: Verb
+maaTTu = defaultVerb
+  { verbRoot = "maaTTu"
+  , verbClass = Class3 }
+
+viDu :: Verb
+viDu = defaultVerb
+  { verbRoot = "viDu"
+  , verbClass = Class1 Weak }
+
 conjugateNegative :: NegativeConjugation -> Verb -> ChoiceString
 conjugateNegative conjugation verb =
   case conjugation of
@@ -528,7 +538,7 @@ conjugateNegative conjugation verb =
     NegativeFuture (Third (Irrational irrational)) ->
       getNegativeFutureIrrational irrational verb
     NegativeFuture subject ->
-      getInfinitive verb |+ suffix "maaTT" (simpleSuffix subject)
+      getInfinitive verb |+| conjugateNegative (NegativeClassical subject) maaTTu
     NegativeHabitual ->
       getNounAdhu verb |+ "illai"
     NegativeClassical (Third (Irrational irrational)) ->
@@ -544,7 +554,7 @@ conjugateNegative conjugation verb =
     NegativeAdverb ->
       getNegativeFutureAdhuRoot verb |+| ChoiceString ["aamal"] ["aadhu", "aa"]
     NegativeConditional ->
-      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aa"] ["aamal"] |+| ChoiceString ["viTTaal"] ["viDil", "viDin"]
+      getNegativeFutureAdhuRoot verb |+| ChoiceString ["aa"] ["aamal"] |+| conjugatePositive Conditional viDu
     NegativeCommand False ->
       getNegativeFutureAdhuRoot verb |+ "aadhE"
     NegativeCommand True ->

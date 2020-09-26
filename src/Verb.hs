@@ -78,17 +78,9 @@ parseClass = \case
       "S" -> Right Strong
       _   -> Left "expected W or S for strength"
 
-parseTamil' :: String -> Either String TamilString
-parseTamil' s =
-  case parseTamil s of
-    Left err ->
-      Left $ show err
-    Right tamil ->
-      Right tamil
-
 parseTamilNonEmpty :: String -> Either String TamilString
 parseTamilNonEmpty s =
-  case parseTamil' s of
+  case parseTamil s of
     Right (TamilString []) ->
       Left "word cannot be empty"
     other -> other
@@ -121,21 +113,26 @@ parseVerb s =
         case map (stripTo . map toLower . unwords . splitHyphen) $ split ',' definitions of
           [] ->
             Left "expected at least one definition in second section of verb"
+          ["???"] ->
+            Right verb
           verbDefinitions ->
-            Right verb { verbDefinitions }
+            if any (any \x -> not (isAlpha x) && x /= ' ') verbDefinitions then
+              Left "verb definitions cannot contain special characters, only [a-z]"
+            else
+              Right verb { verbDefinitions }
       foldM addFlag verb $ map words flags
     _ ->
       Left "missing definition for verb"
   where
     checkValid kind unparsed str =
-      case findError str of
-        Nothing -> return ()
-        Just err ->
+      case validateTamil str of
+        Left err ->
           Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
+        other -> other
     getRootInfo class_ prefix root = do
       verbClass <- parseClass class_
 
-      verbPrefix <- parseTamil' prefix
+      verbPrefix <- parseTamil prefix
       checkValid "prefix" prefix verbPrefix
 
       verbRoot <- parseTamilNonEmpty root
@@ -240,12 +237,23 @@ instance Ord Verb where
 
 instance Show Verb where
   show Verb { .. } =
-    show verbClass ++ " " ++ maybePrefix ++ toLatin verbRoot ++ ". " ++ intercalate ", " verbDefinitions ++ flags
+    show verbClass ++ " " ++ maybePrefix ++ rootStr ++ ". " ++ definitions ++ flags
     where
-      maybePrefix =
+      definitions =
+        case verbDefinitions of
+          [] -> "???"
+          _  -> intercalate ", " verbDefinitions
+      (maybePrefix, rootStr) =
         case verbPrefix of
-          TamilString [] -> ""
-          _              -> toLatin verbPrefix ++ " "
+          TamilString [] ->
+            ("", toLatin verbRoot)
+          _ ->
+            (,) (toLatin verbPrefix ++ " ")
+              case toLatin verbRoot of
+                ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
+                  "ch" ++ rest
+                root ->
+                  root
       addFlag _ False s = s
       addFlag f True s = ". " ++ f ++ s
       addKey _ Nothing s = s

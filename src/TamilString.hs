@@ -341,32 +341,11 @@ instance IsString TamilString where
   fromString str =
     case parseTamil str of
       Left err ->
-        error $ show err
+        error err
       Right res ->
         res
 
-data ParseError
-  = VowelHiatus
-  | UnexpectedPulli
-  | UnexpectedTilde
-  | UnknownChar Char
-
-instance Show ParseError where
-  show = \case
-    VowelHiatus ->
-      "vowel cannot immediately follow vowel"
-    UnexpectedPulli ->
-      "pulli can only occur after 'a'"
-    UnexpectedTilde ->
-      "'~' can only occur after 'ng'"
-    UnknownChar ' ' ->
-      "word cannot contain spaces"
-    UnknownChar '\n' ->
-      "word cannot contain newlines"
-    UnknownChar ch ->
-      "not valid Tamil letter: " ++ [ch]
-
-parseTamil :: String -> Either ParseError TamilString
+parseTamil :: String -> Either String TamilString
 parseTamil str = TamilString <$> foldM convert [] str
   where
     convert str = \case
@@ -439,7 +418,7 @@ parseTamil str = TamilString <$> foldM convert [] str
           Consonant (Hard K) : rest@(Consonant (Soft Ng) : _) ->
             Right rest
           _ ->
-            Left UnexpectedTilde
+            Left "'~' can only occur after 'ng'"
 
       'அ' -> vowel $ A Short
       'ஆ' -> vowel $ A Long
@@ -500,7 +479,7 @@ parseTamil str = TamilString <$> foldM convert [] str
           Vowel (A Short) : rest ->
             Right rest
           _ ->
-            Left UnexpectedPulli
+            Left "pulli can only occur after 'a'"
 
       'க' -> consonantA $ Hard K
       'ச' -> consonantA $ Hard Ch
@@ -525,7 +504,12 @@ parseTamil str = TamilString <$> foldM convert [] str
       'ழ' -> consonantA $ Medium Zh
       'ள' -> consonantA $ Medium LRetroflex
 
-      ch -> Left $ UnknownChar ch
+      ' ' ->
+        Left "word cannot contain spaces"
+      '\n' ->
+        Left "word cannot contain newlines"
+      ch ->
+        Left $ "not valid Tamil letter: " ++ [ch]
       where
         vowelCombinations combinations current =
           case str of
@@ -547,7 +531,7 @@ parseTamil str = TamilString <$> foldM convert [] str
               -- oha -> Oa -> oga
               Right $ Vowel v : Consonant (Hard K) : Vowel (O Short) : rest
             Vowel _ : _ ->
-              Left VowelHiatus
+              Left "vowel cannot immediately follow vowel"
             _ ->
               Right $ Vowel v : str
         consonant c =
@@ -581,6 +565,8 @@ toLatin :: TamilString -> String
 toLatin (TamilString str) =
   case str of
     Consonant (Hard h) : rest@(Vowel _ : _) ->
+      go [unvoiced h] rest
+    Consonant (Hard h) : rest@(Consonant (Medium _) : _) ->
       go [unvoiced h] rest
     _ ->
       go "" str
@@ -773,32 +759,26 @@ allowJunction first next
   | otherwise =
     getFollowClass first `elem` getPreceding next
 
-findError :: TamilString -> Maybe String
-findError = go . untamil
+validateTamil :: TamilString -> Either String ()
+validateTamil = go . reverse . untamil
   where
     go (current : rest@(next : _)) =
       case (current, next) of
         (Vowel _, Vowel _) ->
-          Just $ show VowelHiatus
-        (Consonant b, Consonant a) | not $ allowJunction a b ->
-          Just $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
+          Left "vowel cannot immediately follow vowel"
+        (Consonant a, Consonant b) | not $ allowJunction a b ->
+          if a == b then
+            Left $ "consonant " ++ show a ++ " cannot be doubled"
+          else
+            Left $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
         _ -> go rest
-    go _ = Nothing
-
-isValid :: TamilString -> Bool
-isValid str =
-  case findError str of
-    Just _ -> False
-    Nothing -> True
+    go _ = Right ()
 
 parseAndValidateTamil :: String -> Either String TamilString
-parseAndValidateTamil str =
-  case parseTamil str of
-    Left err -> Left $ show err
-    Right word ->
-      case findError word of
-        Just err -> Left err
-        Nothing -> Right word
+parseAndValidateTamil str = do
+  word <- parseTamil str
+  validateTamil word
+  return word
 
 fromLetter :: TamilLetter -> TamilString
 fromLetter = TamilString . (: [])

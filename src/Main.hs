@@ -8,6 +8,8 @@ import System.IO
 import System.Exit
 import System.Environment
 
+import Data.List
+
 import qualified Data.Set as Set
 
 loadVerbList :: FilePath -> IO VerbList
@@ -47,6 +49,18 @@ main = do
             Right words ->
               putStrLn $ unwords (map toTamil words) ++ " (" ++ unwords (map toLatin words) ++ ")"
           startInteractive verbList
+        (":guess":words) -> do
+          case mapM parseAndValidateTamil words of
+            Left err ->
+              putStrLn $ "error: " ++ err
+            Right words ->
+              let word = foldl' suffix (TamilString []) words in
+              case guess verbList word of
+                [] ->
+                  putStrLn "error: could not guess word"
+                verbs ->
+                  mapM_ (print . snd) verbs
+          startInteractive verbList
         (":export":pathParts) -> do
           let path = unwords pathParts
           exportVerbList path verbList
@@ -77,6 +91,7 @@ main = do
           startInteractive defaultVerbList
         (":help":_) -> do
           putStrLn ":parse <word>   parse the Tamil word and convert it to both alphabets"
+          putStrLn ":guess <word>   guess an appropriate verb entry for this word"
           putStrLn ":export <file>  export the currently loaded verbs to a file"
           putStrLn ":load <file>    load a verb list from a file (replacing any loaded verbs)"
           putStrLn ":add <verb>     add a single verb"

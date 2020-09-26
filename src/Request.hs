@@ -401,6 +401,7 @@ guessNoInfo str =
   where
     reducedRoot = TamilString reducedStr
     prefixRoot = TamilString prefixStr
+    -- Try to split the string if there's a word boundary to split at before the last 2 letters
     (reducedStr, prefixStr) =
       let unsplit = (str, []) in
       case
@@ -417,20 +418,52 @@ guessNoInfo str =
           case firstConsonant of
             Hard h ->
               case prefix of
+                -- Make sure hard consonant was correctly doubled if it was doubled
                 Consonant (Hard h') : rest | h' == h ->
-                  -- Make sure hard consonant was correctly doubled if it was doubled
                   case rest of
+                    -- Accusative case
+                    Vowel Ai : Consonant _ : _ -> split
+                    -- Infinitive
+                    Vowel (A Short) : Consonant c : _ | infinitiveLetter c -> split
+                    -- Class 3 adverb
                     Vowel (I Short) : Consonant _ : _ -> split
+                    Consonant (Medium Y) : _ -> split
+                    -- Class 1 adverb, dative case, etc.
                     Vowel (U Short) : Consonant x : Consonant y : _ | x == y -> split
+                    Vowel (U Short) : Consonant (Hard _) : Consonant (Hard _) : _ -> split
                     _ -> unsplit
-                Vowel (U Short) : Consonant (Hard x) : Consonant (Hard y) : _ | x == y -> unsplit
+                -- This isn't an adverb or dative case since it wasn't doubled
+                Vowel (U Short) : Consonant x : Consonant y : _ | x == y -> unsplit
+                Vowel (U Short) : Consonant (Hard _) : Consonant (Hard _) : _ -> unsplit
+                -- Class 2 adverb
                 Vowel (U Short) : Consonant _ : _ -> split
                 _ -> unsplit
+            -- These can't start words, so they definitely won't split
+            Medium LRetroflex -> unsplit
+            Medium LAlveolar -> unsplit
+            Medium R -> unsplit
+            Medium Zh -> unsplit
             _ ->
+              -- Check if this could be a good word boundary, but be more strict since there's no way to check doubling
               case prefix of
+                -- Accusative case
+                Vowel Ai : Consonant _ : _ -> split
+                -- Infinitive
+                Vowel (A Short) : Consonant c : _ | infinitiveLetter c -> split
+                -- Class 1 adverb
+                Vowel (U Short) : Consonant (Hard h) : Consonant (Hard h') : _ | h == h' -> split
+                -- Class 2 adverb
+                Vowel (U Short) : Consonant (Hard h) : Consonant (Soft s) : _ | s == getPaired h -> split
+                -- Class 3 adverb
                 Vowel (I Short) : Consonant _ : _ -> split
-                Vowel (U Short) : Consonant _ : _ -> split
+                Consonant (Medium Y) : _ -> split
                 _ -> unsplit
+    infinitiveLetter = \case
+      Hard K          -> True
+      Medium _        -> True
+      Soft NRetroflex -> True
+      Soft NAlveolar  -> True
+      _               -> False
     basicClass c =
       ( show c
       , defaultVerb
@@ -481,23 +514,23 @@ lookupVerb verbList showTamil allowGuess word =
       case parseTamil word of
         Left err ->
           if any isUpper word then
-            Left $ show err
+            Left err
           else if any isSpace word then
             notDefinition
           else
-            Left $ "not found as definition and not valid as Tamil (" ++ show err ++ ")"
+            Left $ "not found as definition and not valid as Tamil (" ++ err ++ ")"
         Right tamil ->
           case HashMap.lookup tamil $ byRoot verbList of
             Just verbs ->
               Right $ map (\verb -> (intercalate ", " $ verbDefinitions verb, verb)) verbs
             Nothing ->
-              case findError tamil of
-                Just err ->
+              case validateTamil tamil of
+                Left err ->
                   if allowGuess then
                     Left err
                   else
                     notDefinition
-                Nothing ->
+                Right () ->
                   if allowGuess then
                     case guess verbList tamil of
                       [] ->
