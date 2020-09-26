@@ -750,7 +750,6 @@ getPreceding = \case
     allowCDE  = FollowClassC : allowDE
 
 allowJunction :: Consonant -> Consonant -> Bool
-allowJunction (Medium R)  (Medium R)  = False
 allowJunction (Medium Zh) (Medium Zh) = False
 allowJunction (Soft s) (Hard h)
   | s == getPaired h = True
