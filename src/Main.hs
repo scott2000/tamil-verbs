@@ -9,6 +9,7 @@ import System.Exit
 import System.Environment
 
 import Data.List
+import Data.Char
 
 import qualified Data.Set as Set
 
@@ -43,11 +44,30 @@ main = do
       words <$> getLine >>= \case
         [] -> return ()
         (":parse":words) -> do
-          case mapM parseAndValidateTamil words of
-            Left err ->
-              putStrLn $ "error: " ++ err
-            Right words ->
-              putStrLn $ unwords (map toTamil words) ++ " (" ++ unwords (map toLatin words) ++ ")"
+          let
+            isWordChar c = isAlpha c || isMark c
+            skipSpecial [] = ("", "")
+            skipSpecial str =
+              let
+                (special, specialRest) = span (not . isWordChar) str
+                (alpha, alphaRest) = span isWordChar specialRest
+                (t, l) =
+                  case parseTamil alpha of
+                    Left _ ->
+                      (alpha, alpha)
+                    Right word ->
+                      (toTamil word, toLatin word)
+                (ts, ls) = skipSpecial alphaRest
+              in
+                (special ++ t ++ ts, special ++ l ++ ls)
+            (t, l) = skipSpecial $ unwords words
+          if t == l then
+            putStrLn "error: no valid Tamil words found"
+          else if length l < 40 then
+            putStrLn $ t ++ " (" ++ l ++ ")"
+          else do
+            putStrLn t
+            putStrLn l
           startInteractive verbList
         (":guess":words) -> do
           case mapM parseAndValidateTamil words of
