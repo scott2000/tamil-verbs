@@ -83,7 +83,7 @@ main = do
               putStrLn $ "error: " ++ err
             Right words ->
               let word = foldl' suffix (TamilString []) words in
-              mapM_ (print . snd) $ guess verbList word
+              mapM_ (print . snd) $ guess True verbList word
           startInteractive verbList
         (":export":pathParts) -> do
           let path = unwords pathParts

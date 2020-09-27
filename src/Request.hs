@@ -477,21 +477,20 @@ guessNoInfo str =
           , verbDefective = True
           , verbClass = Class2 Weak } )
 
-guess :: VerbList -> TamilString -> [(String, Verb)]
-guess verbList basicRoot =
+guess :: Bool -> VerbList -> TamilString -> [(String, Verb)]
+guess allowNoInfoGuess verbList basicRoot =
   case go $ sortOn (\(TamilString root, _) -> -(length root)) combinedList of
-    [] -> guessNoInfo reducedStr
+    [] | allowNoInfoGuess -> guessNoInfo reducedStr
     verbs -> verbs
   where
     combinedList =
-      HashMap.toList (byRoot verbList) ++ HashMap.toList (byRoot irregularVerbs)
+      concatMap (HashMap.toList . byRoot) [verbList, defaultVerbList, irregularVerbs]
     reducedStr =
       case untamil basicRoot of
         Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortishVowel v -> rest
         Vowel (U Short) : Consonant c : rest@(Consonant o : _) | c == o, mayDouble c -> rest
         Vowel (U Short) : rest@(Consonant c : _) | mayDouble c -> rest
         Vowel (U Short) : rest@(Consonant (Medium R) : _) -> rest
-        Vowel (U Short) : rest@(Consonant (Medium Zh) : _) -> rest
         str -> str
     go [] = []
     go ((root, verbs):rest) =
@@ -533,7 +532,7 @@ lookupVerb verbList showTamil allowGuess word =
                     notDefinition
                 Right () ->
                   if allowGuess then
-                    Right $ guess verbList tamil
+                    Right $ guess True verbList tamil
                   else
                     Left $ "verb not found" ++
                       let
@@ -542,11 +541,34 @@ lookupVerb verbList showTamil allowGuess word =
                       in
                         case take 3 $ sort suggestions of
                           [] ->
-                            case guess verbList tamil of
-                              [] -> ""
-                              _ ->
-                                -- Only recommend if it'll actually work
-                                " (maybe try again with 'guess'?)"
+                            let
+                              hasUpperCaseOrTamil = any (not . isAsciiLower) word
+                              endsWithNonEnglish =
+                                case untamil tamil of
+                                  Consonant (Medium LAlveolar) : _  -> True
+                                  Consonant (Medium LRetroflex) : _ -> True
+                                  Vowel (U Short) : _ -> True
+                                  Vowel (I Short) : _ -> True
+                                  _ -> False
+                              isSpecial = \case
+                                Consonant (Soft Ny) -> True
+                                Consonant (Medium Zh) -> True
+                                Vowel (A Long) -> True
+                                Vowel (E Long) -> True
+                                Vowel (O Long) -> True
+                                Vowel Au -> True
+                                _ -> False
+                              looksLikeTamil =
+                                hasUpperCaseOrTamil || endsWithNonEnglish || any isSpecial (untamil tamil)
+                            in
+                              -- Only allow no-info guessing if the word doesn't look English
+                              case guess looksLikeTamil verbList tamil of
+                                [] -> ""
+                                list@(_ : _ : _) | any (null . verbDefinitions . snd) list ->
+                                  -- If there are multiple choices and it wasn't a known word, don't recommend
+                                  ""
+                                _ ->
+                                  " (maybe try again with 'guess'?)"
                           suggestions ->
                             let showFunction = if all isAscii word then toLatin else toTamil in
                             " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
@@ -598,7 +620,7 @@ processRequest verbList verb conjugation = do
                   putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
 irregularVerbs :: VerbList
-irregularVerbs = foldl' (flip addVerb) emptyVerbList
+irregularVerbs = makeVerbList
   [ defaultVerb
       { verbRoot = "pODu"
       , verbClass = Class1 Weak }

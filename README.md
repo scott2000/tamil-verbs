@@ -189,18 +189,18 @@ make the strange spellings limited to uncommon words.
 
 ### Vowels
 
-Short vowels only have one way to write them:
+Short vowels can be written very simply:
 
 | அ | இ | உ | எ | ஒ |
 | --- | --- | --- | --- | --- |
 | a | i | u | e | o |
 
-Long vowels have a preferred way and an alternative way:
+But there are multiple ways to write long vowels:
 
-| ஆ | ஈ | ஊ | ஏ | ஐ | ஓ | ஔ | Note |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| aa | ee | oo | E | ai | O | au | *preferred* |
-| A | I | U | ae | ei | oh | ou | *alternative* |
+| ஆ | ஈ | ஊ | ஏ | ஓ | ஐ | ஔ |
+| --- | --- | --- | --- | --- | --- | --- |
+| aa | ee | oo | ae | oh | ai | au |
+| A | I | U | E | O | | |
 
 ### Consonants
 
@@ -214,7 +214,7 @@ followed by `h` (`kh`, `ch`, `th`, `bh`, etc).
 | g | s | D | d | b | |
 | h\* | j | | | | |
 
-\**only between vowels or after medium consonants other than `z`*
+\**only between vowels or after medium consonants other than `zh`*
 
 \*\**can be written as `tR` or `tr` when doubled instead of `RR`*
 
@@ -237,7 +237,7 @@ Medium consonants are the simplest:
 
 | ய் | ர் | ல் | வ் | ழ் | ள் |
 | --- | --- | --- | --- | --- | --- |
-| y | r | l | v / w | zh / z | L |
+| y / Y | r | l | v / w | zh / z | L |
 
 ### Less Common Symbols
 

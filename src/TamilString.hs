@@ -378,9 +378,9 @@ parseTamil str = TamilString <$> foldM convert [] str
     convert str = \case
       'a' -> vowelCombinations [(A Short, A Long)] $ A Short
       'A' -> vowel $ A Long
-      'i' -> vowelCombinations [(A Short, Ai), (E Short, Ai)] $ I Short
+      'i' -> vowelCombinations [(A Short, Ai)] $ I Short
       'I' -> vowel $ I Long
-      'u' -> vowelCombinations [(A Short, Au), (O Short, Au)] $ U Short
+      'u' -> vowelCombinations [(A Short, Au)] $ U Short
       'U' -> vowel $ U Long
       'e' -> vowelCombinations [(E Short, I Long), (A Short, E Long)] $ E Short
       'E' -> vowel $ E Long
@@ -413,6 +413,7 @@ parseTamil str = TamilString <$> foldM convert [] str
           _ ->
             consonant $ Medium Y
 
+      'Y' -> consonant $ Medium Y
       'r' -> r $ Medium R
       'l' -> consonant $ Medium LAlveolar
       'v' -> consonant $ Medium V
@@ -440,9 +441,12 @@ parseTamil str = TamilString <$> foldM convert [] str
           Consonant (Hard _) : _ ->
             -- kh, ch, th, dh, bh, etc.
             Right str
-          Consonant (Soft NAlveolar) : rest@(_ : _) ->
-            -- nh, only when it's not the first letter
-            Right $ Consonant (Soft NDental) : rest
+          Consonant (Soft NAlveolar) : rest ->
+            Right case rest of
+              [] -> str
+              _ ->
+                -- nh, only when it's not the first letter
+                Consonant (Soft NDental) : rest
           Consonant (Medium Zh) : _ ->
             -- zh
             Right str
@@ -701,6 +705,8 @@ toLatin (TamilString str) =
           'n' : acc
         Consonant (Soft s) : rest ->
           go' rest $ soft s
+        Consonant (Medium Y) : Consonant (Soft NAlveolar) : rest ->
+          go' rest "nY"
         Consonant (Medium m) : rest ->
           go' rest case m of
             Y          -> "y"
