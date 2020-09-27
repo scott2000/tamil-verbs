@@ -178,3 +178,73 @@ on the ending of the verb root.
 | -*(long vowel)* | ஆ (ஆகு) | -ன்- | ஆனேன் | -வ்- | ஆவேன் |
 | *other* | பேசு | -இன்- | பேசினேன் | -வ்- | பேசுவேன் |
 
+## Transliteration
+
+This program uses a custom style of transliteration. Capital letters are treated
+differently than lowercase letters to allow for more distinctions than are
+present in English. There are sometimes multiple ways to write the same letter
+to allow for more natural spellings. Most of these are fairly obvious, but due
+to the limited number of symbols, some concessions had to be made. I tried to
+make the strange spellings limited to uncommon words.
+
+### Vowels
+
+Short vowels only have one way to write them:
+
+| அ | இ | உ | எ | ஒ |
+| --- | --- | --- | --- | --- |
+| a | i | u | e | o |
+
+Long vowels have a preferred way and an alternative way:
+
+| ஆ | ஈ | ஊ | ஏ | ஐ | ஓ | ஔ | Note |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| aa | ee | oo | E | ai | O | au | *preferred* |
+| A | I | U | ae | ei | oh | ou | *alternative* |
+
+### Consonants
+
+There are lots of ways to write hard consonants due to their differences in
+pronunciation depending on position in the word. Each one can also optionally be
+followed by `h` (`kh`, `ch`, `th`, `bh`, etc).
+
+| க் | ச் | ட் | த் | ப் | ற் |
+| --- | --- | --- | --- | --- | --- |
+| k | c | T | t | p | R\*\* |
+| g | s | D | d | b | |
+| h\* | j | | | | |
+
+\**only between vowels or after medium consonants other than `z`*
+
+\*\**can be written as `tR` or `tr` when doubled instead of `RR`*
+
+Soft consonants have some unique ways of writing each letter:
+
+| ங் | ஞ் | ண் | ந் | ம் | ன் |
+| --- | --- | --- | --- | --- | --- |
+| ng~ | ny | N | n\* | m | n |
+
+\**must be written as `nh` when not the first letter in a word*
+
+But there are also some combined forms for the common case of the soft consonant
+being followed by a hard consonant:
+
+| ங்க் | ஞ்ச் | ண்ட் | ந்த் | ம்ப் | ன்ற் |
+| --- | --- | --- | --- | --- | --- |
+| ng | nj | ND | ndh / nd | mb | ndR / ndr |
+
+Medium consonants are the simplest:
+
+| ய் | ர் | ல் | வ் | ழ் | ள் |
+| --- | --- | --- | --- | --- | --- |
+| y | r | l | v / w | zh / z | L |
+
+### Less Common Symbols
+
+The aaydham (ஃ) is written as `K` giving `eKgu` for எஃகு. Foreign sounds that
+aren't common in verbs can also be used:
+
+| ஜ் | ஸ் | ஹ் | ஷ் | ஶ் | ஃப் | ஃஜ் | ஃஸ் | க்ஷ் | ஸ்ரீ |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| J | S | H | Sh | SSh | F | Z | X | kSh | Sree / SShree |
+

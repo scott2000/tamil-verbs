@@ -273,19 +273,39 @@ instance Show Idaiyinam where
     Zh         -> "ழ் (zh)"
     LRetroflex -> "ள் (L)"
 
+data Grantha
+  = J
+  | Sh
+  | S
+  | H
+  | SSh
+  deriving (Ord, Eq, Generic)
+
+instance Hashable Grantha
+
+instance Show Grantha where
+  show = \case
+    J   -> "ஜ் (J)"
+    Sh  -> "ஷ் (Sh)"
+    S   -> "ஸ் (S)"
+    H   -> "ஹ் (H)"
+    SSh -> "ஶ் (SSh)"
+
 data Consonant
   = Hard !Vallinam
   | Soft !Mellinam
   | Medium !Idaiyinam
+  | Grantha !Grantha
   deriving (Ord, Eq, Generic)
 
 instance Hashable Consonant
 
 instance Show Consonant where
   show = \case
-    Hard h   -> show h
-    Soft s   -> show s
-    Medium m -> show m
+    Hard h    -> show h
+    Soft s    -> show s
+    Medium m  -> show m
+    Grantha g -> show g
 
 consonantWithA :: Consonant -> Char
 consonantWithA = \case
@@ -307,17 +327,23 @@ consonantWithA = \case
   Medium V          -> 'வ'
   Medium Zh         -> 'ழ'
   Medium LRetroflex -> 'ள'
+  Grantha J         -> 'ஜ'
+  Grantha Sh        -> 'ஷ'
+  Grantha S         -> 'ஸ'
+  Grantha H         -> 'ஹ'
+  Grantha SSh       -> 'ஶ'
 
 mayDouble :: Consonant -> Bool
 mayDouble = \case
+  Soft _            -> True
   Medium LRetroflex -> True
   Medium LAlveolar  -> True
-  Soft _            -> True
   _                 -> False
 
 data TamilLetter
   = Vowel !Vowel
   | Consonant !Consonant
+  | Aaydham
   deriving (Ord, Eq, Generic)
 
 instance Hashable TamilLetter
@@ -326,6 +352,7 @@ instance Show TamilLetter where
   show = \case
     Vowel v     -> show v
     Consonant c -> show c
+    Aaydham     -> "ஃ (K)"
 
 newtype TamilString = TamilString
   { -- | A reversed list of letters
@@ -396,20 +423,35 @@ parseTamil str = TamilString <$> foldM convert [] str
       'R' -> r $ Hard RAlveolar
       'n' -> consonant $ Soft NAlveolar
 
+      'J' -> consonant $ Grantha J
+      'S' -> consonant $ Grantha S
+      'H' -> consonant $ Grantha H
+      'K' -> aaydham
+
+      'F' -> aaydhamCombine $ Hard P
+      'Z' -> aaydhamCombine $ Grantha J
+      'X' -> aaydhamCombine $ Grantha S
+
       'h' ->
         case str of
-          Consonant (Soft NAlveolar) : rest@(_ : _) ->
-            -- Only when it's not the first letter
-            Right $ Consonant (Soft NDental) : rest
           Vowel (O Short) : rest ->
             -- oh = O
             Right $ Vowel (O Long) : rest
           Consonant (Hard _) : _ ->
             -- kh, ch, th, dh, bh, etc.
             Right str
+          Consonant (Soft NAlveolar) : rest@(_ : _) ->
+            -- nh, only when it's not the first letter
+            Right $ Consonant (Soft NDental) : rest
           Consonant (Medium Zh) : _ ->
             -- zh
             Right str
+          Consonant (Grantha S) : Consonant (Grantha S) : rest ->
+            -- SSh
+            Right $ Consonant (Grantha SSh) : rest
+          Consonant (Grantha S) : rest ->
+            -- Sh
+            Right $ Consonant (Grantha Sh) : rest
           _ ->
             consonant $ Hard K
 
@@ -503,6 +545,12 @@ parseTamil str = TamilString <$> foldM convert [] str
       'வ' -> consonantA $ Medium V
       'ழ' -> consonantA $ Medium Zh
       'ள' -> consonantA $ Medium LRetroflex
+      'ஜ' -> consonantA $ Grantha J
+      'ஷ' -> consonantA $ Grantha Sh
+      'ஸ' -> consonantA $ Grantha S
+      'ஹ' -> consonantA $ Grantha H
+      'ஶ' -> consonantA $ Grantha SSh
+      'ஃ' -> aaydham
 
       ' ' ->
         Left "word cannot contain spaces"
@@ -536,6 +584,10 @@ parseTamil str = TamilString <$> foldM convert [] str
               Right $ Vowel v : str
         consonant c =
           Right $ Consonant c : str
+        aaydham =
+          Right $ Aaydham : str
+        aaydhamCombine c =
+          Right $ Consonant c : Aaydham : str
         voiced c =
           case str of
             Consonant (Soft NAlveolar) : rest ->
@@ -616,6 +668,12 @@ toLatin (TamilString str) =
           "th" ++ vowel v ++ acc
         Vowel v : rest ->
           go' rest $ vowel v
+        Consonant (Hard P) : Aaydham : rest ->
+          go' rest "F"
+        Consonant (Grantha J) : Aaydham : rest ->
+          go' rest "Z"
+        Consonant (Grantha S) : Aaydham : rest ->
+          go' rest "X"
         Consonant (Hard h) : Consonant (Soft s) : rest
           | s == getPaired h ->
             go' rest case h of
@@ -651,6 +709,15 @@ toLatin (TamilString str) =
             V          -> "v"
             Zh         -> "zh"
             LRetroflex -> "L"
+        Consonant (Grantha m) : rest ->
+          go' rest case m of
+            J   -> "J"
+            Sh  -> "Sh"
+            S   -> "S"
+            H   -> "H"
+            SSh -> "SSh"
+        Aaydham : rest ->
+          go' rest "K"
       where
         go' rest str = go (str ++ acc) rest
 
@@ -673,6 +740,8 @@ toTamil (TamilString str) =
               go (consonantWithA c : vc : acc) rest
         Vowel v : rest ->
           go (vowelInitial v : acc) rest
+        Aaydham : rest ->
+          go ('ஃ' : acc) rest
 
 normalize :: TamilString -> TamilString
 normalize =
@@ -691,6 +760,9 @@ normalize =
       Consonant (Soft _)            -> Consonant $ Hard TDental
       Consonant (Medium Zh)         -> Consonant $ Medium R
       Consonant (Medium LRetroflex) -> Consonant $ Medium LAlveolar
+      Consonant (Grantha H)         -> Consonant $ Hard K
+      Consonant (Grantha _)         -> Consonant $ Hard Ch
+      Aaydham                       -> Consonant $ Hard K
       other -> other
 
 data FollowClass
@@ -699,6 +771,7 @@ data FollowClass
   | FollowClassC
   | FollowClassD
   | FollowClassE
+  | FollowClassAlways
   deriving Eq
 
 getFollowClass :: Consonant -> FollowClass
@@ -721,6 +794,7 @@ getFollowClass = \case
   Medium V          -> FollowClassB
   Medium Zh         -> FollowClassE
   Medium LRetroflex -> FollowClassD
+  Grantha _         -> FollowClassAlways
 
 getPreceding :: Consonant -> [FollowClass]
 getPreceding = \case
@@ -742,12 +816,14 @@ getPreceding = \case
   Medium V          -> allowBDE
   Medium Zh         -> allowNone
   Medium LRetroflex -> allowNone
+  Grantha _         -> allowAll
   where
-    allowNone = []
+    allowNone = [FollowClassAlways]
     allowE    = FollowClassE : allowNone
     allowDE   = FollowClassD : allowE
-    allowBDE  = FollowClassB : allowDE
     allowCDE  = FollowClassC : allowDE
+    allowBDE  = FollowClassB : allowDE
+    allowAll  = FollowClassA : FollowClassB : allowCDE
 
 allowJunction :: Consonant -> Consonant -> Bool
 allowJunction (Medium Zh) (Medium Zh) = False
@@ -844,6 +920,8 @@ suffix (TamilString root) (TamilString suffix) =
     go root            []     = root
     go root@(end:rest) suffix =
       case (last suffix, end) of
+        (_, Aaydham) ->
+          suffix ++ root
         (Consonant _, _) ->
           suffix ++ root
         (_, Consonant c)

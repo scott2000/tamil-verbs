@@ -366,7 +366,6 @@ guessNoInfo :: [TamilLetter] -> [(String, Verb)]
 guessNoInfo str =
   case reducedStr of
     -- These are very hard to guess due to adding euphonic U
-    Vowel (U Short) : Consonant (Medium _) : _ -> []
     Consonant (Medium Y) : _ ->
       [basicClass $ Class1 Weak]
     Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
@@ -491,6 +490,8 @@ guess verbList basicRoot =
         Vowel (U Short) : Consonant (Hard K) : rest@(Vowel v : _) | not $ isShortishVowel v -> rest
         Vowel (U Short) : Consonant c : rest@(Consonant o : _) | c == o, mayDouble c -> rest
         Vowel (U Short) : rest@(Consonant c : _) | mayDouble c -> rest
+        Vowel (U Short) : rest@(Consonant (Medium R) : _) -> rest
+        Vowel (U Short) : rest@(Consonant (Medium Zh) : _) -> rest
         str -> str
     go [] = []
     go ((root, verbs):rest) =
@@ -532,11 +533,7 @@ lookupVerb verbList showTamil allowGuess word =
                     notDefinition
                 Right () ->
                   if allowGuess then
-                    case guess verbList tamil of
-                      [] ->
-                        Left "couldn't make a good guess (make sure there isn't an extra U)"
-                      verbs ->
-                        Right verbs
+                    Right $ guess verbList tamil
                   else
                     Left $ "verb not found" ++
                       let

@@ -58,7 +58,13 @@ main = do
                     Left err ->
                       (alpha, alpha, "error: " ++ err ++ "\n")
                     Right word ->
-                      (toTamil word, toLatin word, "")
+                      let
+                        err =
+                          case validateTamil word of
+                            Left err -> "warning: " ++ err ++ "\n"
+                            Right () -> ""
+                      in
+                        (toTamil word, toLatin word, err)
                 (ts, ls, es) = skipSpecial alphaRest
               in
                 (special ++ t ++ ts, special ++ l ++ ls, e ++ es)
@@ -77,11 +83,7 @@ main = do
               putStrLn $ "error: " ++ err
             Right words ->
               let word = foldl' suffix (TamilString []) words in
-              case guess verbList word of
-                [] ->
-                  putStrLn "error: could not guess word"
-                verbs ->
-                  mapM_ (print . snd) verbs
+              mapM_ (print . snd) $ guess verbList word
           startInteractive verbList
         (":export":pathParts) -> do
           let path = unwords pathParts
