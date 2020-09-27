@@ -227,13 +227,13 @@ Soft consonants have some unique ways of writing each letter:
 \**must be written as `nh` when not the first letter in a word*
 
 But there are also some combined forms for the common case of the soft consonant
-being followed by a hard consonant:
+being followed by its corresponding hard consonant:
 
 | ங்க் | ஞ்ச் | ண்ட் | ந்த் | ம்ப் | ன்ற் |
 | --- | --- | --- | --- | --- | --- |
 | ng | nj | ND | ndh / nd | mb | ndR / ndr |
 
-Medium consonants are the simplest:
+Medium consonants are the simplest consonants:
 
 | ய் | ர் | ல் | வ் | ழ் | ள் |
 | --- | --- | --- | --- | --- | --- |
@@ -241,8 +241,8 @@ Medium consonants are the simplest:
 
 ### Less Common Symbols
 
-The aaydham (ஃ) is written as `K` giving `eKgu` for எஃகு. Foreign sounds that
-aren't common in verbs can also be used:
+The aaydham (ஃ) is written as `K` giving `eKgu` for எஃகு. Non-Tamil sounds that
+aren't common in verbs can also be used, but these require uppercase letters:
 
 | ஜ் | ஸ் | ஹ் | ஷ் | ஶ் | ஃப் | ஃஜ் | ஃஸ் | க்ஷ் | ஸ்ரீ |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
