@@ -40,13 +40,19 @@ hide :: ChoiceString -> ChoiceString
 hide (ChoiceString [] u) = ChoiceString u []
 hide (ChoiceString c  _) = ChoiceString c []
 
+deduplicate :: ChoiceString -> ChoiceString
+deduplicate (ChoiceString c u) =
+  ChoiceString c' u'
+    where
+      c' = nub c
+      u' = nub $ filter (`notElem` c') u
+
 showUsing :: (TamilString -> String) -> ChoiceString -> String
 showUsing _ (ChoiceString [] []) = "<none>"
-showUsing showFunction (ChoiceString c u) =
-  intercalate "; " $ map (intercalate ", " . map showFunction) $ filter (not . null) [c', u']
+showUsing showFunction str =
+  intercalate "; " $ map (intercalate ", " . map showFunction) $ filter (not . null) [c, u]
   where
-    c' = nub c
-    u' = nub $ filter (`notElem` c') u
+    ChoiceString c u = deduplicate str
 
 (|+) :: ChoiceString -> TamilString -> ChoiceString
 cs |+ s =
@@ -75,7 +81,9 @@ forChoice (ChoiceString c u) f =
   ChoiceString (map f c) (map f u)
 
 allChoices :: ChoiceString -> [TamilString]
-allChoices (ChoiceString c u) = c ++ u
+allChoices str = c ++ u
+  where
+    ChoiceString c u = deduplicate str
 
 collapse :: ChoiceString -> TamilString
 collapse (ChoiceString (x:_) _) = x

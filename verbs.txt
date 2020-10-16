@@ -2,6 +2,7 @@
 1W saappiDu. eat
 1W kooppiDu. call
 1W peRu. receive, obtain
+1W paDu. experience, undergo, suffer
 1W pODu. drop, place
 1W viDu. let go, release
 1W azhu. cry
@@ -24,7 +25,7 @@
 1S paDu. lie down, go to bed
 1S piDi. hold, catch, be liked
 1S paar. look, see
-1S muDi. finish
+1S muDi. finish, complete
 1S uDai. break
 
 # Class 2 Weak
@@ -37,9 +38,9 @@
 2W koL. have, hold
 2W kol. kill
 2W sel. go
-2W muDi. be finished. defect
+2W muDi. be finished, be completed. defect
 2W uDai. be broken. defect
-2W teri. be known. defect
+2W teri. be known, be visible, be apparent. defect
 2W puri. be understood. defect
 2W uTkaar. sit
 

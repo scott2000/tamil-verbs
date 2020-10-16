@@ -189,16 +189,14 @@ getClass3PastNYForm verb =
           Just $ TamilString (Consonant (Medium Y) : rest)
         _ ->
           Nothing
-    isIrregular =
-      case getEnding $ verbRoot verb of
-        LongVowel  -> True
-        Alveolar L -> True
-        _          -> False
   in
-    if isIrregular then
-      promote past <> promote withY
-    else
-      promote withY <> promote past
+    case getEnding $ verbRoot verb of
+      LongVowel ->
+        promote past <> demote withY
+      Alveolar L ->
+        promote past <> promote withY
+      _ ->
+        promote withY <> promote past
 
 getAdverb :: Verb -> ChoiceString
 getAdverb verb =
@@ -453,6 +451,14 @@ conjugateFinite tense subject verb =
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
+conjugateAdjective :: TenseConjugation -> Verb -> ChoiceString
+conjugateAdjective tense verb =
+  forChoice (conjugateFinite tense (Third $ Irrational Adhu) verb) \case
+    TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->
+      TamilString rest
+    other ->
+      other
+
 conjugateRelative :: TenseConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
 conjugateRelative tense subject verb =
   case tense of
@@ -488,11 +494,7 @@ conjugatePositive conjugation verb =
     Finite tense subject ->
       conjugateFinite tense subject verb
     Adjective tense ->
-      forChoice (conjugateFinite tense (Third (Irrational Adhu)) verb) \case
-        TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->
-          TamilString rest
-        other ->
-          other
+      conjugateAdjective tense verb
     Relative tense subject ->
       conjugateRelative tense subject verb
     Adverb ->

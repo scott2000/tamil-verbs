@@ -313,15 +313,25 @@ emptyVerbList = VerbList
   , byDefinition = HashMap.empty }
 
 addVerb :: Verb -> VerbList -> VerbList
-addVerb basicVerb VerbList { allVerbs, byRoot, byDefinition } = VerbList
-  { allVerbs = Set.insert v allVerbs
-  , byRoot = insertAll (common (verbPrefix v) |+| getRoot v) byRoot
-  , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
+addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
+  | v `Set.member` allVerbs = verbList
+  | otherwise = VerbList
+    { allVerbs = Set.insert v allVerbs
+    , byRoot = withAllNames
+    , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
   where
     v = basicVerb { verbDefinitions = map stripTo $ verbDefinitions basicVerb }
 
-    insertAll cs m =
-      foldr insertVerb m $ allChoices cs
+    withAllNames =
+      foldr insertVerb byRoot $ allChoices allNames
+    allNames =
+      common (verbPrefix v) |+| (getRoot v <> demote stem)
+    stem =
+      case verbStem v of
+        Nothing ->
+          ChoiceString [] []
+        Just stem ->
+          stem
 
     insertVerb :: (Eq k, Hashable k) => k -> HashMap k [Verb] -> HashMap k [Verb]
     insertVerb = HashMap.alter \case
@@ -342,6 +352,10 @@ defaultVerbList = makeVerbList
     defaultVerb
       { verbRoot = "saappiDu"
       , verbDefinitions = ["eat"]
+      , verbClass = Class1 Weak }
+  , defaultVerb
+      { verbRoot = "paDu"
+      , verbDefinitions = ["experience", "undergo", "suffer"]
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "pODu"
@@ -378,7 +392,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "paDu"
-      , verbDefinitions = ["lie down"]
+      , verbDefinitions = ["lie down", "go to bed"]
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "paar"
@@ -386,7 +400,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "muDi"
-      , verbDefinitions = ["finish"]
+      , verbDefinitions = ["finish", "complete"]
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "uDai"
@@ -421,7 +435,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "muDi"
-      , verbDefinitions = ["be finished"]
+      , verbDefinitions = ["be finished", "be completed"]
       , verbDefective = True
       , verbClass = Class2 Weak }
   , defaultVerb
@@ -431,7 +445,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "teri"
-      , verbDefinitions = ["be known"]
+      , verbDefinitions = ["be known", "be visible", "be apparent"]
       , verbDefective = True
       , verbClass = Class2 Weak }
   , defaultVerb
