@@ -36,7 +36,7 @@ Conjugate tamil verbs in various forms for different subjects
 
 ```
 > become adhu
-ஆனது (aanadhu), ஆயது (aayadhu), ஆயிற்று (aayitRu)
+ஆனது (aanadhu), ஆயிற்று (aayitRu)
 ஆகிறது (aagiRadhu)
 ஆம் (aam), ஆகும் (aagum)
 ```
