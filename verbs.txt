@@ -3,7 +3,7 @@
 1W kooppiDu. call
 1W peRu. receive, obtain
 1W paDu. experience, undergo, suffer
-1W pODu. drop, place
+1W pODu. drop, put, place
 1W viDu. let go, release
 1W azhu. cry
 1W sey. do, make
@@ -25,6 +25,7 @@
 1S paDu. lie down, go to bed
 1S piDi. hold, catch, be liked
 1S paar. look, see
+1S vai. set down, put, place
 1S muDi. finish, complete
 1S uDai. break
 

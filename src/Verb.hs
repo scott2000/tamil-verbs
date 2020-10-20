@@ -359,7 +359,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "pODu"
-      , verbDefinitions = ["drop", "place"]
+      , verbDefinitions = ["drop", "put", "place"]
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "viDu"
@@ -397,6 +397,10 @@ defaultVerbList = makeVerbList
   , defaultVerb
       { verbRoot = "paar"
       , verbDefinitions = ["look", "see"]
+      , verbClass = Class1 Strong }
+  , defaultVerb
+      { verbRoot = "vai"
+      , verbDefinitions = ["set down", "put", "place"]
       , verbClass = Class1 Strong }
   , defaultVerb
       { verbRoot = "muDi"
