@@ -1,4 +1,5 @@
 # Class 1 Weak
+1W saa. die. adv settu
 1W saappiDu. eat
 1W kooppiDu. call
 1W peRu. receive, obtain
@@ -65,7 +66,7 @@
 3 thaLLu. push
 3 thoongu. sleep
 3 tiruDu. steal
-3 tirumbu. turn around, return
+3 tirumbu. turn around, turn, return
 3 nambu. believe, trust, hope
 3 paaDu. sing
 3 pEsu. speak, talk

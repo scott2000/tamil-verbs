@@ -286,7 +286,7 @@ getRoot verb =
   case (verbClass verb, getEnding root) of
     (Class2 Weak, RLike) ->
       ChoiceString [root] [root `append` "u"]
-    (Class3, LongVowel) ->
+    (_, LongVowel) | Nothing <- verbStem verb ->
       ChoiceString [root] [root `append` "gu"]
     _ ->
       if endsInDoublingConsonant root then
@@ -505,7 +505,7 @@ defaultVerbList = makeVerbList
       , verbClass = Class3 }
   , defaultVerb
       { verbRoot = "tirumbu"
-      , verbDefinitions = ["turn around", "return"]
+      , verbDefinitions = ["turn around", "turn", "return"]
       , verbClass = Class3 }
   , defaultVerb
       { verbRoot = "paaDu"

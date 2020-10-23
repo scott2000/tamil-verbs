@@ -288,16 +288,14 @@ getFutureAdhu verb =
       case getStrength verb of
         Weak ->
           if endsInLongVowel stem then
-            let basic = stem `append` "gum" in
-            case verbClass verb of
-              Class3 ->
-                let alt = stem `append` "m" in
-                if isSingleLetter stem then
-                  ChoiceString [alt, basic] []
-                else
-                  ChoiceString [basic] [alt]
-              _ ->
-                common basic
+            let
+              basic = stem `append` "gum"
+              alt = stem `append` "m"
+            in
+              if isSingleLetter stem then
+                ChoiceString [alt, basic] []
+              else
+                ChoiceString [basic] [alt]
           else
             common $ suffix stem "um"
         Strong ->
