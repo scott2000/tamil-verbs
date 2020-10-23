@@ -257,7 +257,7 @@ instance Show Mellinam where
     Ng         -> "ங் (ng~)"
     Ny         -> "ஞ் (ny)"
     NRetroflex -> "ண் (N)"
-    NDental    -> "ந் (n)"
+    NDental    -> "ந் (nh)"
     M          -> "ம் (m)"
     NAlveolar  -> "ன் (n)"
 
@@ -374,14 +374,14 @@ instance Show TamilString where
 
 instance IsString TamilString where
   fromString str =
-    case parseTamil str of
+    case parseTamilSuffix str of
       Left err ->
         error err
       Right res ->
         res
 
-parseTamil :: String -> Either String TamilString
-parseTamil str = TamilString <$> foldM convert [] str
+parseTamilSuffix :: String -> Either String TamilString
+parseTamilSuffix str = TamilString <$> foldM convert [] str
   where
     convert str = \case
       'a' -> vowelCombinations [(A Short, A Long)] $ A Short
@@ -625,6 +625,18 @@ parseTamil str = TamilString <$> foldM convert [] str
             _ ->
               consonant c
 
+parseTamil :: String -> Either String TamilString
+parseTamil str =
+  convertInitialN <$> parseTamilSuffix str
+
+convertInitialN :: TamilString -> TamilString
+convertInitialN =
+  TamilString . go . untamil
+  where
+    go [] = []
+    go [Consonant (Soft NAlveolar)] = [Consonant $ Soft NDental]
+    go (ch : rest) = ch : go rest
+
 toLatin :: TamilString -> String
 toLatin (TamilString str) =
   case str of
@@ -737,9 +749,7 @@ toLatin (TamilString str) =
 
 toTamil :: TamilString -> String
 toTamil (TamilString str) =
-  case go "" str of
-    'ன' : rest -> 'ந' : rest
-    other      -> other
+  go "" str
   where
     go acc str =
       case str of
@@ -848,9 +858,32 @@ allowJunction first next
   | otherwise =
     getFollowClass first `elem` getPreceding next
 
+getAlternativeJunction :: Consonant -> Consonant -> Maybe (Consonant, Consonant)
+getAlternativeJunction (Soft M) (Hard h) =
+  Just (Soft $ getPaired h, Hard h)
+getAlternativeJunction end (Hard TDental) =
+  case end of
+    Soft NRetroflex   -> Just (Soft NRetroflex, Hard TRetroflex)
+    Soft NAlveolar    -> Just (Soft NAlveolar,  Hard RAlveolar)
+    Medium LAlveolar  -> Just (Hard RAlveolar,  Hard RAlveolar)
+    Medium LRetroflex -> Just (Hard TRetroflex, Hard TRetroflex)
+    _                 -> Nothing
+getAlternativeJunction end (Soft NDental) =
+  case end of
+    Soft NRetroflex   -> Just (Soft NRetroflex, Soft NRetroflex)
+    Soft M            -> Just (Soft NDental,    Soft NDental)
+    Soft NAlveolar    -> Just (Soft NAlveolar,  Soft NAlveolar)
+    Medium LAlveolar  -> Just (Soft NAlveolar,  Soft NAlveolar)
+    Medium LRetroflex -> Just (Soft NRetroflex, Soft NRetroflex)
+    _                 -> Nothing
+getAlternativeJunction _ _ = Nothing
+
 validateTamil :: TamilString -> Either String ()
 validateTamil = go . reverse . untamil
   where
+    showPair a b =
+      let str = TamilString [Consonant b, Consonant a] in
+      toTamil str ++ " (" ++ toLatin str ++ ")"
     go (current : rest@(next : _)) =
       case (current, next) of
         (Vowel _, Vowel _) ->
@@ -859,7 +892,16 @@ validateTamil = go . reverse . untamil
           if a == b then
             Left $ "consonant " ++ show a ++ " cannot be doubled"
           else
-            Left $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
+            case getAlternativeJunction a b of
+              Nothing ->
+                Left $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
+              Just (x, y)
+                | y == b ->
+                  Left $ "consonant " ++ show a ++ " should become " ++ show x ++ " when followed by " ++ show b
+                | x == a ->
+                  Left $ "consonant " ++ show b ++ " should become " ++ show y ++ " when preceded by " ++ show a
+                | otherwise ->
+                  Left $ "consonant cluster " ++ showPair a b ++ " should become " ++ showPair x y
         _ -> go rest
     go _ = Right ()
 

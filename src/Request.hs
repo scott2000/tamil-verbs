@@ -188,31 +188,35 @@ parseConjugationRequest parts = do
     ConjugationRequest { crRespectful = True, crType = Nothing, crTense = Nothing, crSubject = Nothing } ->
       return request { crType = Just TRCommand }
     ConjugationRequest { crRespectful = True, crType = Just TRCommand } ->
-      return request
+      continue request
     ConjugationRequest { crRespectful = True, crSubject = Just subject } ->
       case makeRespectful subject of
         Just subject ->
-          return request { crSubject = Just subject}
+          continue request { crSubject = Just subject}
         Nothing -> do
           hPutStrLn stderr $ "error: subject cannot be made respectful: " ++ show (tamilShow subject)
           return request { crError = True }
     ConjugationRequest { crRespectful = True } -> do
       hPutStrLn stderr "error: only commands can be made respectful"
       return request { crError = True }
-    ConjugationRequest { crNegative = False, crTense = Just TRClassical } -> do
-      hPutStrLn stderr "error: classical can only be used with the negative"
-      return request { crError = True }
-    ConjugationRequest { crType = Just ty, crTense = Just TRClassical } -> do
-      hPutStrLn stderr $ "error: " ++ show ty ++ " cannot be made classical"
-      return request { crError = True }
-    ConjugationRequest { crType = Just TRRelative, crSubject = Just (Third _) } ->
-      return request
-    ConjugationRequest { crType = Just TRRelative, crSubject = Just _ } -> do
-      hPutStrLn stderr "error: only third-person subjects can be used with relative nouns"
-      return request { crError = True }
     _ ->
-      return request
+      continue request
   where
+    continue request =
+      case request of
+        ConjugationRequest { crNegative = False, crTense = Just TRClassical } -> do
+          hPutStrLn stderr "error: classical can only be used with the negative"
+          return request { crError = True }
+        ConjugationRequest { crType = Just ty, crTense = Just TRClassical } -> do
+          hPutStrLn stderr $ "error: " ++ show ty ++ " cannot be made classical"
+          return request { crError = True }
+        ConjugationRequest { crType = Just TRRelative, crSubject = Just (Third _) } ->
+          return request
+        ConjugationRequest { crType = Just TRRelative, crSubject = Just _ } -> do
+          hPutStrLn stderr "error: only third-person subjects can be used with relative nouns"
+          return request { crError = True }
+        _ ->
+          return request
     go cr s =
       case map toLower s of
         "negative" ->
