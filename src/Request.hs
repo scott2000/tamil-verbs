@@ -508,6 +508,30 @@ guess allowNoInfoGuess verbList basicRoot =
           in
             map updateVerb verbs
 
+looksLikeVerb :: TamilString -> Bool
+looksLikeVerb (TamilString str) =
+  case str of
+    Consonant c : _ ->
+      case c of
+        Soft NRetroflex   -> True
+        Soft NAlveolar    -> True
+        Medium Y          -> True
+        Medium R          -> True
+        Medium LAlveolar  -> True
+        Medium LRetroflex -> True
+        Medium Zh         -> True
+        _                 -> False
+    Vowel v : _ ->
+      case v of
+        A _     -> True
+        I Short -> True
+        U Short -> True
+        E Long  -> True
+        Ai      -> True
+        O Long  -> True
+        _       -> False
+    _ -> False
+
 lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either String [(String, Verb)]
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup (map toLower word) $ byDefinition verbList of
@@ -564,9 +588,11 @@ lookupVerb verbList showTamil allowGuess word =
                                 _ -> False
                               looksLikeTamil =
                                 hasUpperCaseOrTamil || endsWithNonEnglish || any isSpecial (untamil tamil)
+                              looksLikeTamilVerb =
+                                looksLikeTamil && looksLikeVerb tamil
                             in
-                              -- Only allow no-info guessing if the word doesn't look English
-                              case guess looksLikeTamil verbList tamil of
+                              -- Only allow no-info guessing if the word looks like a Tamil verb
+                              case guess looksLikeTamilVerb verbList tamil of
                                 [] -> ""
                                 list@(_ : _ : _) | any (null . verbDefinitions . snd) list ->
                                   -- If there are multiple choices and it wasn't a known word, don't recommend
@@ -669,12 +695,20 @@ irregularVerbs = makeVerbList
       , verbAdverb = Just $ ChoiceString ["pOndhu", "pOrndhu"] []
       , verbClass = Class2 Weak }
   , defaultVerb
+      { verbRoot = "nO"
+      , verbAdverb = Just "nondhu"
+      , verbClass = Class2 Weak }
+  , defaultVerb
+      { verbRoot = "vE"
+      , verbAdverb = Just "vendhu"
+      , verbClass = Class2 Weak }
+  , defaultVerb
       { verbRoot = "kaaN"
       , verbAdverb = Just "kaNDu"
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "en"
-      , verbInfinitiveRoot = Just $ ChoiceString ["ennu"] ["enu"]
+      , verbInfinitiveRoot = Just $ ChoiceString ["enu"] ["ennu"]
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "agal"

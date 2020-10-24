@@ -287,17 +287,23 @@ getFutureAdhu verb =
       let stem = collapse $ getStem verb in
       case getStrength verb of
         Weak ->
-          if endsInLongVowel stem then
-            let
-              basic = stem `append` "gum"
-              alt = stem `append` "m"
-            in
-              if isSingleLetter stem then
-                ChoiceString [alt, basic] []
-              else
-                ChoiceString [basic] [alt]
-          else
-            common $ suffix stem "um"
+          let
+            basic = suffix stem "um"
+            withGu = stem `append` "gum"
+            withoutGu = stem `append` "m"
+          in
+            if endsInLongVowel stem then
+                if isSingleLetter stem then
+                  ChoiceString [withoutGu, withGu] []
+                else
+                  case stem of
+                    TamilString (Vowel (A Long) : _) ->
+                      -- Long A has a special ending with no joining letter
+                      ChoiceString [withGu] [withoutGu]
+                    _ ->
+                      ChoiceString [withGu] [basic]
+            else
+              common basic
         Strong ->
           common $ stem `append`
             if endsInHardConsonant stem then

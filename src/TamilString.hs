@@ -685,6 +685,12 @@ toLatin (TamilString str) =
       NDental    -> "nh"
       M          -> "m"
       NAlveolar  -> "n"
+    grantha = \case
+      J   -> "J"
+      Sh  -> "Sh"
+      S   -> "S"
+      H   -> "H"
+      SSh -> "SSh"
     go acc str =
       case str of
         [] -> acc
@@ -713,12 +719,14 @@ toLatin (TamilString str) =
             go' rest $ soft s ++ voiced h
         Consonant (Hard RAlveolar) : Consonant (Hard RAlveolar) : rest ->
           go' rest "tR"
+        Consonant (Hard Ch) : Consonant (Hard o) : rest ->
+          go' rest (unvoiced o : "ch")
         Consonant (Hard h) : Consonant (Hard o) : rest ->
           go' rest [unvoiced o, unvoiced h]
+        [Consonant (Hard Ch)] ->
+          's' : acc
         [Consonant (Hard h)] ->
-          (++ acc) case h of
-            Ch -> "s"
-            _  -> [unvoiced h]
+          unvoiced h : acc
         Consonant (Hard h) : rest ->
           go' rest $ voiced h
         [Consonant (Soft NDental)] ->
@@ -735,13 +743,10 @@ toLatin (TamilString str) =
             V          -> "v"
             Zh         -> "zh"
             LRetroflex -> "L"
-        Consonant (Grantha m) : rest ->
-          go' rest case m of
-            J   -> "J"
-            Sh  -> "Sh"
-            S   -> "S"
-            H   -> "H"
-            SSh -> "SSh"
+        Consonant (Grantha g) : Consonant (Hard h) : rest ->
+          go' rest $ unvoiced h : grantha g
+        Consonant (Grantha g) : rest ->
+          go' rest $ grantha g
         Aaydham : rest ->
           go' rest "K"
       where
@@ -878,11 +883,33 @@ getAlternativeJunction end (Soft NDental) =
     _                 -> Nothing
 getAlternativeJunction _ _ = Nothing
 
+validateAfterIdaiyinam :: [Consonant] -> Bool
+validateAfterIdaiyinam [] = True
+validateAfterIdaiyinam [_] = True
+validateAfterIdaiyinam [Soft _, Soft _] = True
+validateAfterIdaiyinam [Soft _, Hard _] = True
+validateAfterIdaiyinam [Hard _, Hard _] = True
+validateAfterIdaiyinam [Grantha _, _] = True
+validateAfterIdaiyinam [_, Grantha _] = True
+validateAfterIdaiyinam _ = False
+
+validateConsonantCluster :: [Consonant] -> Bool
+validateConsonantCluster (Medium _ : rest) =
+  validateAfterIdaiyinam rest
+validateConsonantCluster str =
+  validateAfterIdaiyinam str
+
 validateTamil :: TamilString -> Either String ()
-validateTamil = go . reverse . untamil
+validateTamil str = do
+  go $ reverse $ untamil str
+  forM_ (getConsonantClusters str) \cluster ->
+    if validateConsonantCluster cluster then
+      Right ()
+    else
+      Left $ "consonant cluster " ++ showCluster cluster ++ " is not allowed in Tamil"
   where
-    showPair a b =
-      let str = TamilString [Consonant b, Consonant a] in
+    showCluster cluster =
+      let str = TamilString $ map Consonant $ reverse cluster in
       toTamil str ++ " (" ++ toLatin str ++ ")"
     go (current : rest@(next : _)) =
       case (current, next) of
@@ -901,7 +928,7 @@ validateTamil = go . reverse . untamil
                 | x == a ->
                   Left $ "consonant " ++ show b ++ " should become " ++ show y ++ " when preceded by " ++ show a
                 | otherwise ->
-                  Left $ "consonant cluster " ++ showPair a b ++ " should become " ++ showPair x y
+                  Left $ "consonant cluster " ++ showCluster [a, b] ++ " should become " ++ showCluster [x, y]
         _ -> go rest
     go _ = Right ()
 
@@ -910,6 +937,16 @@ parseAndValidateTamil str = do
   word <- parseTamil str
   validateTamil word
   return word
+
+getConsonantClusters :: TamilString -> [[Consonant]]
+getConsonantClusters = go [] [] . untamil
+  where
+    go cluster clusters = \case
+      [] -> cluster : clusters
+      (Consonant c : rest) ->
+        go (c : cluster) clusters rest
+      (_ : rest) ->
+        go [] (cluster : clusters) rest
 
 fromLetter :: TamilLetter -> TamilString
 fromLetter = TamilString . (: [])

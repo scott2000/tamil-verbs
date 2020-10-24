@@ -320,7 +320,10 @@ addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
     , byRoot = withAllNames
     , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
   where
-    v = basicVerb { verbDefinitions = map stripTo $ verbDefinitions basicVerb }
+    v = basicVerb
+      { verbRoot = convertInitialN $ verbRoot basicVerb
+      , verbPrefix = convertInitialN $ verbPrefix basicVerb
+      , verbDefinitions = map stripTo $ verbDefinitions basicVerb }
 
     withAllNames =
       foldr insertVerb byRoot $ allChoices allNames
