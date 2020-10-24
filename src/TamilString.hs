@@ -863,23 +863,25 @@ allowJunction first next
   | otherwise =
     getFollowClass first `elem` getPreceding next
 
-getAlternativeJunction :: Consonant -> Consonant -> Maybe (Consonant, Consonant)
+getAlternativeJunction :: Consonant -> Consonant -> Maybe (Bool, Consonant, Consonant)
 getAlternativeJunction (Soft M) (Hard h) =
-  Just (Soft $ getPaired h, Hard h)
+  Just (True, Soft $ getPaired h, Hard h)
 getAlternativeJunction end (Hard TDental) =
   case end of
-    Soft NRetroflex   -> Just (Soft NRetroflex, Hard TRetroflex)
-    Soft NAlveolar    -> Just (Soft NAlveolar,  Hard RAlveolar)
-    Medium LAlveolar  -> Just (Hard RAlveolar,  Hard RAlveolar)
-    Medium LRetroflex -> Just (Hard TRetroflex, Hard TRetroflex)
+    Hard TRetroflex   -> Just (True,  Hard TRetroflex, Hard TRetroflex)
+    Hard RAlveolar    -> Just (True,  Hard RAlveolar,  Hard RAlveolar)
+    Soft NRetroflex   -> Just (False, Soft NRetroflex, Hard TRetroflex)
+    Soft NAlveolar    -> Just (False, Soft NAlveolar,  Hard RAlveolar)
+    Medium LAlveolar  -> Just (False, Hard RAlveolar,  Hard RAlveolar)
+    Medium LRetroflex -> Just (False, Hard TRetroflex, Hard TRetroflex)
     _                 -> Nothing
 getAlternativeJunction end (Soft NDental) =
   case end of
-    Soft NRetroflex   -> Just (Soft NRetroflex, Soft NRetroflex)
-    Soft M            -> Just (Soft NDental,    Soft NDental)
-    Soft NAlveolar    -> Just (Soft NAlveolar,  Soft NAlveolar)
-    Medium LAlveolar  -> Just (Soft NAlveolar,  Soft NAlveolar)
-    Medium LRetroflex -> Just (Soft NRetroflex, Soft NRetroflex)
+    Soft NRetroflex   -> Just (True,  Soft NRetroflex, Soft NRetroflex)
+    Soft M            -> Just (True,  Soft NDental,    Soft NDental)
+    Soft NAlveolar    -> Just (True,  Soft NAlveolar,  Soft NAlveolar)
+    Medium LAlveolar  -> Just (False, Soft NAlveolar,  Soft NAlveolar)
+    Medium LRetroflex -> Just (False, Soft NRetroflex, Soft NRetroflex)
     _                 -> Nothing
 getAlternativeJunction _ _ = Nothing
 
@@ -917,7 +919,7 @@ validateTamil str = do
             case getAlternativeJunction a b of
               Nothing ->
                 Left $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
-              Just (x, y)
+              Just (_, x, y)
                 | y == b ->
                   Left $ "consonant " ++ show a ++ " should become " ++ show x ++ " when followed by " ++ show b
                 | x == a ->
@@ -1010,6 +1012,9 @@ suffix (TamilString root) (TamilString suffix) =
       case (last suffix, end) of
         (_, Aaydham) ->
           suffix ++ root
+        (Consonant b, Consonant a)
+          | Just (True, x, y) <- getAlternativeJunction a b ->
+            init suffix ++ [Consonant y, Consonant x] ++ rest
         (Consonant _, _) ->
           suffix ++ root
         (_, Consonant c)

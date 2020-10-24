@@ -148,8 +148,6 @@ parseVerb s =
       verbRoot <- parseTamilNonEmpty root
       checkValid "root" root verbRoot
 
-      checkValid "verb" (prefix ++ " " ++ root) $ suffix verbPrefix verbRoot
-
       return defaultVerb { verbClass, verbPrefix, verbRoot }
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"
