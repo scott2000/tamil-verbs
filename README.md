@@ -93,9 +93,9 @@ paDikkiRaay; paDikkindRaay
 
 There is a built-in vocab list with some very basic verbs, but if you want to
 use your own vocab list, you can load a custom list of verbs by either passing a
-path to the file as a command-line argument, or by using `:load <file>`. This
-repository also contains an extended vocab list called [verbs.txt](verbs.txt)
-with some more advanced verbs.
+path to the file as a command-line argument, or by using `:load <file>` (see
+`:help` for a list of all commands). This repository also contains an extended
+vocab list called [verbs.txt](verbs.txt) with some more advanced verbs.
 
 The basic format of a verb entry is:
 
@@ -122,6 +122,15 @@ all definitions. These are separated by periods (`.`) like the other sections.
 - `inf I` makes `I` be the infinitive form of the verb
 - `resp R` makes `R` be the respectful command for the verb
   (e.g. `vaarungaL` for `vaa`)
+
+Any Tamil parts of the verb definition can be given in either Latin or Tamil
+letters. In general, Latin letters are preferred since they use less storage
+space in vocab lists, and since they are better supported by command-line
+interfaces. In order to confirm that verbs are valid Tamil, some additional
+checking is done if they are given in Latin letters to make sure that all
+sequences of consonants are valid by Tamil grammar rules. If you need to create
+a verb with an invalid sequence of consonants, then you should use Tamil letters
+directly in the verb entry.
 
 Putting it all together, the entry for the compound irregular verb கொண்டுவா
 (`koNDuvaa`) looks like:

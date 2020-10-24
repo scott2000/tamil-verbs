@@ -148,6 +148,8 @@ parseVerb s =
       verbRoot <- parseTamilNonEmpty root
       checkValid "root" root verbRoot
 
+      checkValid "verb" (prefix ++ " " ++ root) $ suffix verbPrefix verbRoot
+
       return defaultVerb { verbClass, verbPrefix, verbRoot }
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"
@@ -245,23 +247,29 @@ instance Ord Verb where
 
 instance Show Verb where
   show Verb { .. } =
-    show verbClass ++ " " ++ maybePrefix ++ rootStr ++ ". " ++ definitions ++ flags
+    show verbClass ++ " " ++ combinedRoot ++ ". " ++ definitions ++ flags
     where
       definitions =
         case verbDefinitions of
           [] -> "???"
           _  -> intercalate ", " verbDefinitions
-      (maybePrefix, rootStr) =
+      combinedRoot =
         case verbPrefix of
           TamilString [] ->
-            ("", toLatinIfValid verbRoot)
+            toLatinIfValid verbRoot
           _ ->
-            (,) (toLatinIfValid verbPrefix ++ " ")
-              case toLatinIfValid verbRoot of
-                ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
-                  "ch" ++ rest
-                root ->
-                  root
+            case validateTamil (suffix verbPrefix verbRoot) of
+              Left _ ->
+                -- If the combined root isn't valid, put it in Tamil
+                toTamil verbPrefix ++ " " ++ toTamil verbRoot
+              Right _ ->
+                toLatinIfValid verbPrefix ++ " " ++
+                  case toLatinIfValid verbRoot of
+                    -- Convert initial 's' to 'ch' if the prefix ends in a hard consonant
+                    ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
+                      "ch" ++ rest
+                    root ->
+                      root
       toLatinIfValid str =
         case validateTamil str of
           Left _  -> toTamil str
