@@ -919,13 +919,8 @@ validateTamil str = do
             case getAlternativeJunction a b of
               Nothing ->
                 Left $ "consonant " ++ show a ++ " cannot be followed by " ++ show b
-              Just (_, x, y)
-                | y == b ->
-                  Left $ "consonant " ++ show a ++ " should become " ++ show x ++ " when followed by " ++ show b
-                | x == a ->
-                  Left $ "consonant " ++ show b ++ " should become " ++ show y ++ " when preceded by " ++ show a
-                | otherwise ->
-                  Left $ "consonant cluster " ++ showCluster [a, b] ++ " should become " ++ showCluster [x, y]
+              Just (_, x, y) ->
+                Left $ "consonant cluster " ++ showCluster [a, b] ++ " should become " ++ showCluster [x, y]
         _ -> go rest
     go _ = Right ()
 
