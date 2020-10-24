@@ -21,7 +21,7 @@
 1S kudhi. jump
 1S kuLi. bathe, shower, take a bath, take a shower
 1S koDu. give
-1S kiDai. be available
+1S kiDai. be available, be received, be obtained
 1S paDi. study, read
 1S paDu. lie down, go to bed
 1S piDi. hold, catch, be liked
@@ -56,7 +56,7 @@
 
 # Classs 3
 3 aa. become, happen, be done
-3 paNNu. make
+3 paNNu. do, make
 3 pO. go, leave
 3 sol. say, tell
 3 anuppu. send
