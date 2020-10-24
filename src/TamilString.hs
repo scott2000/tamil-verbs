@@ -883,21 +883,16 @@ getAlternativeJunction end (Soft NDental) =
     _                 -> Nothing
 getAlternativeJunction _ _ = Nothing
 
-validateAfterIdaiyinam :: [Consonant] -> Bool
-validateAfterIdaiyinam [] = True
-validateAfterIdaiyinam [_] = True
-validateAfterIdaiyinam [Soft _, Soft _] = True
-validateAfterIdaiyinam [Soft _, Hard _] = True
-validateAfterIdaiyinam [Hard _, Hard _] = True
-validateAfterIdaiyinam [Grantha _, _] = True
-validateAfterIdaiyinam [_, Grantha _] = True
-validateAfterIdaiyinam _ = False
-
 validateConsonantCluster :: [Consonant] -> Bool
-validateConsonantCluster (Medium _ : rest) =
-  validateAfterIdaiyinam rest
-validateConsonantCluster str =
-  validateAfterIdaiyinam str
+validateConsonantCluster [] = True
+validateConsonantCluster [_] = True
+validateConsonantCluster [_, _] = True
+validateConsonantCluster [Medium _, Soft _, Hard _] = True
+validateConsonantCluster [Medium _, Hard _, Hard _] = True
+validateConsonantCluster [Grantha _, _, _] = True
+validateConsonantCluster [_, Grantha _, _] = True
+validateConsonantCluster [_, _, Grantha _] = True
+validateConsonantCluster _ = False
 
 validateTamil :: TamilString -> Either String ()
 validateTamil str = do

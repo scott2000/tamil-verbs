@@ -85,8 +85,8 @@ parseTamilNonEmpty s =
       Left "word cannot be empty"
     other -> other
 
-parseChoiceString :: String -> Either String ChoiceString
-parseChoiceString s =
+parseFlagChoice :: String -> Either String ChoiceString
+parseFlagChoice s =
   case map (split ',') $ split ';' s of
     [c] ->
       (`ChoiceString` []) <$> getTamil c
@@ -95,7 +95,22 @@ parseChoiceString s =
     _ ->
       Left "expected either 1 or 2 sets of choices"
   where
-    getTamil = traverse parseTamilNonEmpty
+    getTamil = traverse \str -> do
+      parsed <- parseTamilNonEmpty str
+      checkValid "flag" str parsed
+      return parsed
+
+checkValid :: String -> String -> TamilString -> Either String ()
+checkValid kind unparsed str
+  -- Don't validate consonant clusters if directly written in Tamil
+  | all isTamilOrSpace unparsed = return ()
+  | otherwise =
+    case validateTamil str of
+      Left err ->
+        Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
+      other -> other
+  where
+    isTamilOrSpace x = not (isAscii x) || x == ' '
 
 parseVerb :: String -> Either String Verb
 parseVerb s =
@@ -124,11 +139,6 @@ parseVerb s =
     _ ->
       Left "missing definition for verb"
   where
-    checkValid kind unparsed str =
-      case validateTamil str of
-        Left err ->
-          Left $ "invalid " ++ kind ++ " '" ++ unparsed ++ "': " ++ err
-        other -> other
     getRootInfo class_ prefix root = do
       verbClass <- parseClass class_
 
@@ -147,7 +157,7 @@ parseVerb s =
     addFlag _ [flag] =
       Left $ "invalid flag for verb: " ++ flag
     addFlag verb (key : strParts) = do
-      choiceStr@(ChoiceString c u) <- parseChoiceString $ concat strParts
+      choiceStr@(ChoiceString c u) <- parseFlagChoice $ concat strParts
       let
         removeEnding = replaceEnding ""
         replaceEnding newEnding kind endings =
@@ -246,18 +256,22 @@ instance Show Verb where
       (maybePrefix, rootStr) =
         case verbPrefix of
           TamilString [] ->
-            ("", toLatin verbRoot)
+            ("", toLatinIfValid verbRoot)
           _ ->
-            (,) (toLatin verbPrefix ++ " ")
-              case toLatin verbRoot of
+            (,) (toLatinIfValid verbPrefix ++ " ")
+              case toLatinIfValid verbRoot of
                 ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
                   "ch" ++ rest
                 root ->
                   root
+      toLatinIfValid str =
+        case validateTamil str of
+          Left _  -> toTamil str
+          Right _ -> toLatin str
       addFlag _ False s = s
       addFlag f True s = ". " ++ f ++ s
       addKey _ Nothing s = s
-      addKey k (Just c) s = ". " ++ k ++ " " ++ showUsing toLatin c ++ s
+      addKey k (Just c) s = ". " ++ k ++ " " ++ showUsing toLatinIfValid c ++ s
       flags =
         addFlag "defect" verbDefective $
         addKey "adv" verbAdverb $
