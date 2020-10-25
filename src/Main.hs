@@ -1,3 +1,4 @@
+-- | An interactive program for conjugating Tamil verbs
 module Main where
 
 import TamilString
@@ -15,16 +16,19 @@ import Data.Char
 
 import qualified Data.Set as Set
 
+-- | Load a 'VerbList' from a given file
 loadVerbList :: FilePath -> IO VerbList
 loadVerbList filePath = do
   (errs, verbList) <- parseAllVerbs <$> readFile filePath
   mapM_ putStrLn errs
   return verbList
 
+-- | Export a 'VerbList' to a given file path
 exportVerbList :: FilePath -> VerbList -> IO ()
 exportVerbList filePath =
   writeFile filePath . unlines . map show . Set.toAscList . allVerbs
 
+-- | Start the interactive verb request interface
 main :: IO ()
 main = do
   verbList <-

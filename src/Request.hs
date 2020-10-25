@@ -1,3 +1,4 @@
+-- | Functions for processing a request for a conjugation from a user
 module Request where
 
 import TamilString
@@ -13,6 +14,7 @@ import System.IO
 
 import qualified Data.HashMap.Strict as HashMap
 
+-- | A type of conjugation that can be requested
 data TypeRequest
   = TRAdjective
   | TRRelative
@@ -33,6 +35,7 @@ instance Show TypeRequest where
     TRConditional -> "conditional"
     TRCommand     -> "command"
 
+-- | A type of tense (or related item) that can be requested
 data TenseRequest
   = TRPast
   | TRPresent
@@ -49,6 +52,7 @@ instance Show TenseRequest where
     TRHabitual  -> "habitual"
     TRClassical -> "classical"
 
+-- | An alphabet that can be used to print the result
 data TamilOrLatin
   = TRTamil
   | TRLatin
@@ -59,17 +63,19 @@ instance Show TamilOrLatin where
     TRTamil -> "tamil"
     TRLatin -> "latin"
 
+-- | A parsed request from the user
 data ConjugationRequest = ConjugationRequest
-  { crNegative :: Bool
-  , crRespectful :: Bool
+  { crError :: Bool       -- ^ If true, there has been a fatal error in parsing
+  , crGuess :: Bool       -- ^ If true, allow guessing when a verb isn't known
+  , crAlt :: Bool         -- ^ If true, show alternative conjugations
+  , crNegative :: Bool    -- ^ If true, a 'NegativeConjugation' should be used
+  , crRespectful :: Bool  -- ^ If true, a command should be made respectful
   , crType :: Maybe TypeRequest
   , crTense :: Maybe TenseRequest
   , crSubject :: Maybe Subject
-  , crFormat :: Maybe TamilOrLatin
-  , crGuess :: Bool
-  , crAlt :: Bool
-  , crError :: Bool }
+  , crFormat :: Maybe TamilOrLatin }
 
+-- | Get the set of 'Conjugation's that should be displayed for a 'ConjugationRequest'
 getConjugations :: ConjugationRequest -> Verb -> [Conjugation]
 getConjugations cr verb =
   if crError cr then [] else
@@ -167,19 +173,20 @@ getConjugations cr verb =
               | defective -> [Future]
               | otherwise -> [Past, Present, Future]
 
+-- | Parse a set of keywords into a 'ConjugationRequest'
 parseConjugationRequest :: [String] -> IO ConjugationRequest
 parseConjugationRequest parts = do
   let
     defaultRequest = ConjugationRequest
-      { crNegative = False
+      { crError = False
+      , crGuess = False
+      , crAlt = False
+      , crNegative = False
       , crRespectful = False
       , crType = Nothing
       , crTense = Nothing
       , crSubject = Nothing
-      , crFormat = Nothing
-      , crGuess = False
-      , crAlt = False
-      , crError = False }
+      , crFormat = Nothing }
   request <- foldM go defaultRequest parts
   case request of
     ConjugationRequest { crNegative = True, crType = Just TRInfinitive } -> do
@@ -366,8 +373,9 @@ parseConjugationRequest parts = do
               return ()
           return $ put $ Just new
 
-guessNoInfo :: [TamilLetter] -> [(String, Verb)]
-guessNoInfo str =
+-- | Given some root and no other information, guess the verb's conjugation
+guessNoInfo :: TamilString -> [(String, Verb)]
+guessNoInfo (TamilString str) =
   case reducedStr of
     -- These are very hard to guess due to adding euphonic U
     Consonant (Medium Y) : _ ->
@@ -481,10 +489,11 @@ guessNoInfo str =
           , verbDefective = True
           , verbClass = Class2 Weak } )
 
+-- | Given some root, try to guess how to conjugate the verb, possibly making assumptions due to the form of the root
 guess :: Bool -> VerbList -> TamilString -> [(String, Verb)]
 guess allowNoInfoGuess verbList basicRoot =
   case go $ sortOn (\(TamilString root, _) -> -(length root)) combinedList of
-    [] | allowNoInfoGuess -> guessNoInfo reducedStr
+    [] | allowNoInfoGuess -> guessNoInfo $ TamilString reducedStr
     verbs -> verbs
   where
     combinedList =
@@ -508,6 +517,7 @@ guess allowNoInfoGuess verbList basicRoot =
           in
             map updateVerb verbs
 
+-- | Checks if a 'TamilString' looks like a normal Tamil verb
 looksLikeVerb :: TamilString -> Bool
 looksLikeVerb (TamilString str) =
   case str of
@@ -523,15 +533,14 @@ looksLikeVerb (TamilString str) =
         _                 -> False
     Vowel v : _ ->
       case v of
-        A _     -> True
+        A Short -> True
         I Short -> True
         U Short -> True
-        E Long  -> True
         Ai      -> True
-        O Long  -> True
         _       -> False
     _ -> False
 
+-- | Tries to look up a search in a 'VerbList' given a function to show Tamil words and optionally guesses if needed
 lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either String [(String, Verb)]
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup (map toLower word) $ byDefinition verbList of
@@ -591,7 +600,7 @@ lookupVerb verbList showTamil allowGuess word =
                               looksLikeTamilVerb =
                                 looksLikeTamil && looksLikeVerb tamil
                             in
-                              -- Only allow no-info guessing if the word looks like a Tamil verb
+                              -- Only allow no-info guessing if the word looks like a predictable Tamil verb
                               case guess looksLikeTamilVerb verbList tamil of
                                 [] -> ""
                                 list@(_ : _ : _) | any (null . verbDefinitions . snd) list ->
@@ -603,6 +612,7 @@ lookupVerb verbList showTamil allowGuess word =
                             let showFunction = if all isAscii word then toLatin else toTamil in
                             " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
 
+-- | Processes a conjugation request for a given verb with given arguments in a given 'VerbList'
 processRequest :: VerbList -> String -> String -> IO ()
 processRequest verbList verb conjugation = do
   let word = stripTo $ unwords $ splitHyphen verb
@@ -649,6 +659,7 @@ processRequest verbList verb conjugation = do
                 forM_ conjugations \conjugation ->
                   putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
+-- | A set of known irregular verb conjugations that can be used when guessing
 irregularVerbs :: VerbList
 irregularVerbs = makeVerbList
   [ defaultVerb
@@ -657,6 +668,7 @@ irregularVerbs = makeVerbList
   , defaultVerb
       { verbRoot = "saa"
       , verbAdverb = Just "settu"
+      , verbFutureAdhu = Just $ ChoiceString ["saagum"] ["saam"]
       , verbClass = Class1 Weak }
   , defaultVerb
       { verbRoot = "azhu"
@@ -701,6 +713,9 @@ irregularVerbs = makeVerbList
   , defaultVerb
       { verbRoot = "vE"
       , verbAdverb = Just "vendhu"
+      , verbFutureAdhu = Just "vEgum"
+      , verbInfinitiveRoot = Just $ ChoiceString ["vEgu"] ["vEvu"]
+      , verbRespectfulCommandRoot = Just $ ChoiceString ["vEgu"] ["vEvu"]
       , verbClass = Class2 Weak }
   , defaultVerb
       { verbRoot = "kaaN"

@@ -1,3 +1,4 @@
+-- | Functions and data types for conjugating Tamil verbs
 module Conjugation
   ( IrrationalSubject (..)
   , allIrrationalSubjects
@@ -7,6 +8,7 @@ module Conjugation
   , allSubjects
   , makeRespectful
   , TenseConjugation (..)
+  , Respectful
   , PositiveConjugation (..)
   , NegativeConjugation (..)
   , Conjugation (..)
@@ -18,6 +20,7 @@ import Verb
 
 import Data.Char
 
+-- | Represents an irrational third person subject pronoun
 data IrrationalSubject
   = Adhu
   | Avai
@@ -31,9 +34,11 @@ instance TamilShow IrrationalSubject where
 instance Show IrrationalSubject where
   show = map toLower . toLatin . tamilShow
 
+-- | A list of all possible 'IrrationalSubject's
 allIrrationalSubjects :: [IrrationalSubject]
 allIrrationalSubjects = [Adhu, Avai]
 
+-- | Represents a third person subject pronoun
 data ThirdPersonSubject
   = Avan
   | Aval
@@ -42,11 +47,13 @@ data ThirdPersonSubject
   | Irrational IrrationalSubject
   deriving Eq
 
+-- | A list of all possible 'ThirdPersonSubject's
 allThirdPersonSubjects :: [ThirdPersonSubject]
 allThirdPersonSubjects =
   [ Avan, Aval, Avar, Avargal ]
   ++ map Irrational allIrrationalSubjects
 
+-- | Relative suffix for third person subjects which use V in the future
 vRelativeSuffix :: ThirdPersonSubject -> ChoiceString
 vRelativeSuffix = \case
   Avan            -> "On"
@@ -54,6 +61,7 @@ vRelativeSuffix = \case
   Irrational Adhu -> "adhu"
   _               -> mempty
 
+-- | Relative suffix for third person subjects which use P in the future
 pRelativeSuffix :: ThirdPersonSubject -> ChoiceString
 pRelativeSuffix = \case
   Irrational Adhu ->
@@ -61,6 +69,7 @@ pRelativeSuffix = \case
   other ->
     common $ tamilShow other
 
+-- | Relative suffix for third person subjects for non-future tenses
 relativeSuffix :: ThirdPersonSubject -> ChoiceString
 relativeSuffix subject =
   promote $ pRelativeSuffix subject <> demote (vRelativeSuffix subject)
@@ -76,6 +85,7 @@ instance TamilShow ThirdPersonSubject where
 instance Show ThirdPersonSubject where
   show = map toLower . toLatin . tamilShow
 
+-- | Represents a subject
 data Subject
   = Naan
   | Naam
@@ -99,12 +109,14 @@ instance TamilShow Subject where
 instance Show Subject where
   show = map toLower . toLatin . tamilShow
 
+-- | A list of all possible 'Subject's
 allSubjects :: [Subject]
 allSubjects =
   [ Naan, Naam, Naangal
   , Nee, Neer, Neengal ]
   ++ map Third allThirdPersonSubjects
 
+-- | Converts a subject to be more respectful, if possible
 makeRespectful :: Subject -> Maybe Subject
 makeRespectful = \case
   Naam -> Just Naangal
@@ -117,6 +129,7 @@ makeRespectful = \case
   Third Avargal -> Just $ Third Avargal
   _ -> Nothing
 
+-- | A single suffix that is common between tenses
 simpleSuffix :: Subject -> TamilString
 simpleSuffix = \case
   Naan                    -> "En"
@@ -132,13 +145,7 @@ simpleSuffix = \case
   Third (Irrational Adhu) -> "adhu"
   Third (Irrational Avai) -> "ana"
 
-subjectSuffix :: Subject -> ChoiceString
-subjectSuffix = \case
-  Third Avargal ->
-    ChoiceString ["aargaL", "anar"] []
-  other ->
-    common $ simpleSuffix other
-
+-- | Calls the provided function with @False@ for non-avai suffixes and @True@ for avai suffixes and then joins them
 usingAvaiSuffix :: Subject -> (Bool -> ChoiceString) -> ChoiceString
 usingAvaiSuffix subject f =
   case subject of
@@ -149,6 +156,7 @@ usingAvaiSuffix subject f =
     other ->
       f False |+ simpleSuffix other
 
+-- | Gets the past tense stem of the verb
 getPast :: Verb -> ChoiceString
 getPast verb =
   case verbAdverb verb of
@@ -179,6 +187,7 @@ getPast verb =
         (Class3, _) ->
           common $ suffix root "in"
 
+-- | Gets the special past tense forms (N and Y) for 'Class3' verbs
 getClass3PastNYForm :: Verb -> ChoiceString
 getClass3PastNYForm verb =
   let
@@ -198,6 +207,7 @@ getClass3PastNYForm verb =
       _ ->
         promote withY <> promote past
 
+-- | Gets the adverb form of a verb
 getAdverb :: Verb -> ChoiceString
 getAdverb verb =
   case verbClass verb of
@@ -218,10 +228,12 @@ getAdverb verb =
     _ ->
       getPast verb |+ "u"
 
+-- | Represents when to convert L's in the stem into their respective hard consonants
 data StemKind
-  = StemStrengthBased
-  | StemPlain
+  = StemStrengthBased  -- ^ Convert when the verb is 'Strong'
+  | StemPlain          -- ^ Never convert, even when 'Strong'
 
+-- | Like @getStem@, but accepts a @StemKind@
 getStemKind :: StemKind -> Verb -> ChoiceString
 getStemKind kind verb =
   case kind of
@@ -247,9 +259,11 @@ getStemKind kind verb =
         _ ->
           stem
 
+-- | Gets the stem onto which the present and future suffixes are added
 getStem :: Verb -> ChoiceString
 getStem = getStemKind StemStrengthBased
 
+-- | Adds either a single or double hard consonant to the stem depending on the strength of the verb
 oneOrTwoOnStem :: Vallinam -> Verb -> ChoiceString
 oneOrTwoOnStem hard verb =
   forChoice (getStem verb) \stem ->
@@ -261,6 +275,7 @@ oneOrTwoOnStem hard verb =
   where
     c = Consonant $ Hard hard
 
+-- | Gets the present tense stem of the verb
 getPresent :: Verb -> Bool -> ChoiceString
 getPresent verb avai =
   if avai then
@@ -268,6 +283,7 @@ getPresent verb avai =
   else
     oneOrTwoOnStem K verb |+| ChoiceString ["iR"] ["indR"]
 
+-- | Gets the future tense stem of the verb
 getFuture :: Verb -> ChoiceString
 getFuture verb =
   forChoice (getStem verb) \stem ->
@@ -279,6 +295,7 @@ getFuture verb =
           Weak   -> "v"
           Strong -> "pp"
 
+-- | Gets the future tense of the verb for 'Adhu'
 getFutureAdhu :: Verb -> ChoiceString
 getFutureAdhu verb =
   case verbFutureAdhu verb of
@@ -296,9 +313,8 @@ getFutureAdhu verb =
                 if isSingleLetter stem then
                   ChoiceString [withoutGu, withGu] []
                 else
-                  case stem of
-                    TamilString (Vowel (A Long) : _) ->
-                      -- Long A has a special ending with no joining letter
+                  case verbClass verb of
+                    Class3 ->
                       ChoiceString [withGu] [withoutGu]
                     _ ->
                       ChoiceString [withGu] [basic]
@@ -311,6 +327,7 @@ getFutureAdhu verb =
             else
               "kkum"
 
+-- | Like @getInfinitiveRoot@, but accepts a @StemKind@
 getInfinitiveRootKind :: StemKind -> Verb -> ChoiceString
 getInfinitiveRootKind kind verb =
   case verbInfinitiveRoot verb of
@@ -320,7 +337,7 @@ getInfinitiveRootKind kind verb =
       case getStrength verb of
         Weak ->
           if endsInLongVowel stem then
-            let basic = stem `append` "g" in
+            let basic = stem `append` "gu" in
             case verbClass verb of
               Class3 ->
                 common basic
@@ -336,10 +353,11 @@ getInfinitiveRootKind kind verb =
               _ ->
                 stem `append`
                   if endsInHardConsonant stem then
-                    "k"
+                    "ku"
                   else
-                    "kk"
+                    "kku"
 
+-- | Like @getInfinitive@, but with U instead of the final A
 getInfinitiveRoot :: Verb -> ChoiceString
 getInfinitiveRoot verb =
   let plain = getInfinitiveRootKind StemPlain verb in
@@ -348,14 +366,17 @@ getInfinitiveRoot verb =
     Strong ->
       getInfinitiveRootKind StemStrengthBased verb <> demote plain
 
+-- | Gets the infinitive form of the verb
 getInfinitive :: Verb -> ChoiceString
 getInfinitive verb =
   getInfinitiveRootKind StemStrengthBased verb |+ "a"
 
+-- | Gets the root from which the negative future for 'Adhu' will be formed
 getNegativeFutureAdhuRoot :: Verb -> ChoiceString
 getNegativeFutureAdhuRoot verb =
   getInfinitiveRoot verb <> demote (getRespectfulCommandRoot verb)
 
+-- | Gets the negative future tense of the verb for an 'IrrationalSubject'
 getNegativeFutureIrrational :: IrrationalSubject -> Verb -> ChoiceString
 getNegativeFutureIrrational subject verb =
   let root = getNegativeFutureAdhuRoot verb in
@@ -365,9 +386,11 @@ getNegativeFutureIrrational subject verb =
     Avai ->
       root |+| ("aadhu" <> "aa")
 
+-- | Gets the verbal noun formed by adding -adhu
 getNounAdhu :: Verb -> ChoiceString
 getNounAdhu = conjugateRelative Future $ Irrational Adhu
 
+-- | Gets the verbal noun formed by adding -thal
 getNounThal :: Verb -> ChoiceString
 getNounThal verb =
   let stem = collapse $ getStem verb in
@@ -391,14 +414,17 @@ getNounThal verb =
       else
         ChoiceString [stem `append` "ttal"] [stem `append` "kkudhal"]
 
+-- | Gets the verbal noun formed by adding -kai
 getNounKai :: Verb -> ChoiceString
 getNounKai verb =
   oneOrTwoOnStem K verb |+ "ai"
 
+-- | Gets the verbal noun formed by adding -al
 getNounAl :: Verb -> ChoiceString
 getNounAl verb =
   getInfinitive verb |+ "l"
 
+-- | Gets the root from which the respectful command will be formed
 getRespectfulCommandRoot :: Verb -> ChoiceString
 getRespectfulCommandRoot verb =
   case verbRespectfulCommandRoot verb of
@@ -415,12 +441,13 @@ getRespectfulCommandRoot verb =
         _ ->
           common $ suffix root "u"
 
+-- | Represents a tense used for a 'PositiveConjugation'
 data TenseConjugation
   = Past
   | Present
   | Future
-  deriving Show
 
+-- | Conjugate a verb with a certain tense and subject
 conjugateFinite :: TenseConjugation -> Subject -> Verb -> ChoiceString
 conjugateFinite tense subject verb =
   case (tense, verbClass verb, subject) of
@@ -455,6 +482,7 @@ conjugateFinite tense subject verb =
     (Future, _, _) ->
       getFuture verb |+ simpleSuffix subject
 
+-- | Conjugate a verb as an adjective
 conjugateAdjective :: TenseConjugation -> Verb -> ChoiceString
 conjugateAdjective tense verb =
   forChoice (conjugateFinite tense (Third $ Irrational Adhu) verb) \case
@@ -463,6 +491,7 @@ conjugateAdjective tense verb =
     other ->
       other
 
+-- | Conjugate a verb as a relative clause
 conjugateRelative :: TenseConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
 conjugateRelative tense subject verb =
   case tense of
@@ -480,18 +509,20 @@ conjugateRelative tense subject verb =
   where
     subjectSuffix = relativeSuffix subject
 
+-- | Represents whether a conjugation for a command should be respectful
 type Respectful = Bool
 
+-- | Represents a regular conjugation that is not negated
 data PositiveConjugation
-  = Finite TenseConjugation Subject
-  | Adjective TenseConjugation
-  | Relative TenseConjugation ThirdPersonSubject
-  | Noun
-  | Adverb
-  | Conditional
-  | Command Respectful
-  deriving Show
+  = Finite TenseConjugation Subject               -- ^ (e.g. @irundhEn@, @irukkiREn@, @iruppEn@)
+  | Adjective TenseConjugation                    -- ^ (e.g. @irundha@, @irukkiRa@, @irukkum@)
+  | Relative TenseConjugation ThirdPersonSubject  -- ^ (e.g. @irundhavar@, @irukkiRavar@, @iruppavar@)
+  | Noun                                          -- ^ (e.g. @iruppadhu@)
+  | Adverb                                        -- ^ (e.g. @irundhu@)
+  | Conditional                                   -- ^ (e.g. @irundhaal@)
+  | Command Respectful                            -- ^ (e.g. @iru@, @irungaL@)
 
+-- | Get a 'PositiveConjugation' of a 'Verb'
 conjugatePositive :: PositiveConjugation -> Verb -> ChoiceString
 conjugatePositive conjugation verb =
   case conjugation of
@@ -513,29 +544,33 @@ conjugatePositive conjugation verb =
       let commandRoot = getRespectfulCommandRoot verb in
       commandRoot |+ "ngaL" <> demote (commandRoot |+ "m")
 
+-- | Represents a negated conjugation
 data NegativeConjugation
-  = NegativePastPresent
-  | NegativeFuture Subject
-  | NegativeHabitual
-  | NegativeClassical Subject
-  | NegativeAdjective
-  | NegativeRelative ThirdPersonSubject
-  | NegativeNoun
-  | NegativeAdverb
-  | NegativeConditional
-  | NegativeCommand Respectful
+  = NegativePastPresent                 -- ^ (e.g. @seyyavillai@)
+  | NegativeFuture Subject              -- ^ (e.g. @seyyamaaTTEn@)
+  | NegativeHabitual                    -- ^ (e.g. @seyvadhillai@)
+  | NegativeClassical Subject           -- ^ (e.g. @seyyEn@)
+  | NegativeAdjective                   -- ^ (e.g. @seyyaadha@)
+  | NegativeRelative ThirdPersonSubject -- ^ (e.g. @seyyaadhavar@)
+  | NegativeNoun                        -- ^ (e.g. @seyyaadhadhu@)
+  | NegativeAdverb                      -- ^ (e.g. @seyyaamal@)
+  | NegativeConditional                 -- ^ (e.g. @seyyaaviTTaal@)
+  | NegativeCommand Respectful          -- ^ (e.g. @seyyaadhE@, @seyyaadheergaL@)
   deriving Show
 
+-- | A helper verb that is used for 'NegativeFuture' conjugations
 maaTTu :: Verb
 maaTTu = defaultVerb
   { verbRoot = "maaTTu"
   , verbClass = Class3 }
 
+-- | A helper verb that is used for 'NegativeConditional' conjugations
 viDu :: Verb
 viDu = defaultVerb
   { verbRoot = "viDu"
   , verbClass = Class1 Weak }
 
+-- | Get a 'NegativeConjugation' of a 'Verb'
 conjugateNegative :: NegativeConjugation -> Verb -> ChoiceString
 conjugateNegative conjugation verb =
   case conjugation of
@@ -566,12 +601,13 @@ conjugateNegative conjugation verb =
     NegativeCommand True ->
       getNegativeFutureAdhuRoot verb |+ "aadheergaL"
 
+-- | Represents a way to conjugate a verb
 data Conjugation
   = Positive PositiveConjugation
   | Negative NegativeConjugation
-  | Infinitive
-  deriving Show
+  | Infinitive  -- ^ (e.g. @irukka@)
 
+-- | Get a 'Conjugation' of a 'Verb'
 conjugate :: Conjugation -> Verb -> ChoiceString
 conjugate conjugation verb =
   common (verbPrefix verb) |+|

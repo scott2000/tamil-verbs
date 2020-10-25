@@ -1,3 +1,4 @@
+-- | Verb lists for storing information needed to conjugate verbs
 module Verb where
 
 import TamilString
@@ -13,8 +14,10 @@ import qualified Data.Set as Set
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 
+-- | Indicates whether a tongue position is used for N or L
 data NorL = N | L
 
+-- | Represents different verb endings that have different conjugations
 data VerbEnding
   = HardAndU Vallinam
   | LongVowel
@@ -23,6 +26,7 @@ data VerbEnding
   | RLike
   | OtherEnding
 
+-- | Find the 'VerbEnding' of a 'TamilString'
 getEnding :: TamilString -> VerbEnding
 getEnding (TamilString str) =
   case str of
@@ -42,11 +46,13 @@ getEnding (TamilString str) =
     _ ->
       OtherEnding
 
+-- | Represents the strength of a verb for the present and future tense conjugations
 data Strength
   = Weak
   | Strong
   deriving (Ord, Eq)
 
+-- | Represents the class of a verb for the past tense conjugation
 data VerbClass
   = Class1 Strength
   | Class2 Strength
@@ -61,9 +67,7 @@ instance Show VerbClass where
     Class2 Strong -> "2S"
     Class3        -> "3"
 
--- CLASS [PREFIX] ROOT. (DEFINITION),+ (. FLAG)*
--- 2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
-
+-- | Parses the 'VerbClass' in a 'Verb' entry
 parseClass :: String -> Either String VerbClass
 parseClass = \case
   '1' : s -> Class1 <$> parseStrength s
@@ -78,6 +82,13 @@ parseClass = \case
       "S" -> Right Strong
       _   -> Left "expected W or S for strength"
 
+-- | Remove @"to "@ from the start of verb definitions
+stripTo :: String -> String
+stripTo (' ' : s) = stripTo s
+stripTo ('t' : 'o' : ' ' : s) = stripTo s
+stripTo other = other
+
+-- | Like 'parseTamil', but rejects empty strings
 parseTamilNonEmpty :: String -> Either String TamilString
 parseTamilNonEmpty s =
   case parseTamil s of
@@ -85,6 +96,7 @@ parseTamilNonEmpty s =
       Left "word cannot be empty"
     other -> other
 
+-- | Parses a 'ChoiceString' for a flag in a 'Verb' entry
 parseFlagChoice :: String -> Either String ChoiceString
 parseFlagChoice s =
   case map (split ',') $ split ';' s of
@@ -100,6 +112,7 @@ parseFlagChoice s =
       checkValid "flag" str parsed
       return parsed
 
+-- | Checks if a 'TamilString' is valid if it wasn't written in Tamil letters
 checkValid :: String -> String -> TamilString -> Either String ()
 checkValid kind unparsed str
   -- Don't validate consonant clusters if directly written in Tamil
@@ -112,6 +125,7 @@ checkValid kind unparsed str
   where
     isTamilOrSpace x = not (isAscii x) || x == ' '
 
+-- | Parse a 'Verb' entry in a 'VerbList'
 parseVerb :: String -> Either String Verb
 parseVerb s =
   case split '.' s of
@@ -199,6 +213,7 @@ parseVerb s =
     addFlag _ _ =
       Left "verb flag cannot be empty"
 
+-- | Parse a verb list file's contents and return a list of errors and a 'VerbList'
 parseAllVerbs :: String -> ([String], VerbList)
 parseAllVerbs file =
   go (lines file) (1 :: Int) [] []
@@ -222,16 +237,27 @@ parseAllVerbs file =
                   let err = "syntax error in line " ++ show n ++ ": " ++ e in
                   go rest n' (err:errs) verbs
 
+-- | Represents a verb that can be conjugated
 data Verb = Verb
-  { verbRoot :: TamilString
+  { -- | The basic root of the verb (used for commands)
+    verbRoot :: TamilString
+    -- | The prefix to add to every conjugation (used for compound verbs)
   , verbPrefix :: TamilString
+    -- | The definitions of the verb in English
   , verbDefinitions :: [String]
+    -- | 'True' if the verb should be conjugated in the future adhu primarily
   , verbDefective :: Bool
+    -- | An irregular adverb/past (only for classes 1 and 2)
   , verbAdverb :: Maybe ChoiceString
+    -- | An irregular stem for present and future tense
   , verbStem :: Maybe ChoiceString
+    -- | An irregular future adhu
   , verbFutureAdhu :: Maybe ChoiceString
+    -- | An irregular infinitive root (ends in U, not A)
   , verbInfinitiveRoot :: Maybe ChoiceString
+    -- | An irregular respectful command root (ends in U)
   , verbRespectfulCommandRoot :: Maybe ChoiceString
+    -- | The class of the verb
   , verbClass :: VerbClass }
 
 instance Eq Verb where
@@ -287,6 +313,7 @@ instance Show Verb where
         addKey "resp" ((|+ "ngaL") <$> verbRespectfulCommandRoot) $
         ""
 
+-- | A 'Verb' with no root, definitions, or class
 defaultVerb :: Verb
 defaultVerb = Verb
   { verbRoot = undefined
@@ -300,6 +327,7 @@ defaultVerb = Verb
   , verbRespectfulCommandRoot = Nothing
   , verbClass = undefined }
 
+-- | Gets the possible roots for a 'Verb' (including alternative forms)
 getRoot :: Verb -> ChoiceString
 getRoot verb =
   let root = verbRoot verb in
@@ -314,6 +342,7 @@ getRoot verb =
       else
         common root
 
+-- | Gets the 'Strength' of a 'Verb'
 getStrength :: Verb -> Strength
 getStrength verb =
   case verbClass verb of
@@ -321,17 +350,23 @@ getStrength verb =
     Class2 s -> s
     Class3   -> Weak
 
+-- | A list of 'Verb's sorted in various ways to make searching faster
 data VerbList = VerbList
-  { allVerbs :: Set Verb
+  { -- | All verbs sorted in order
+    allVerbs :: Set Verb
+    -- | Verbs indexed by the verb root
   , byRoot :: !(HashMap TamilString [Verb])
+    -- | Verbs indexed by the verb definition
   , byDefinition :: !(HashMap String [Verb]) }
 
+-- | An empty 'VerbList' with no verbs
 emptyVerbList :: VerbList
 emptyVerbList = VerbList
   { allVerbs = Set.empty
   , byRoot = HashMap.empty
   , byDefinition = HashMap.empty }
 
+-- | Add a 'Verb' to a 'VerbList'
 addVerb :: Verb -> VerbList -> VerbList
 addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
   | v `Set.member` allVerbs = verbList
@@ -361,14 +396,11 @@ addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
       Nothing -> Just [v]
       Just vs -> Just $ v : vs
 
-stripTo :: String -> String
-stripTo (' ' : s) = stripTo s
-stripTo ('t' : 'o' : ' ' : s) = stripTo s
-stripTo other = other
-
+-- | Make a 'VerbList' from a list of verbs
 makeVerbList :: [Verb] -> VerbList
 makeVerbList = foldl' (flip addVerb) emptyVerbList
 
+-- | The default list of verbs to be used when no verb list is provided
 defaultVerbList :: VerbList
 defaultVerbList = makeVerbList
   [ -- Class 1 Weak

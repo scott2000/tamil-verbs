@@ -1,3 +1,4 @@
+-- | A data structure for dealing with Tamil text with fast append operations
 module TamilString where
 
 import GHC.Generics
@@ -10,11 +11,16 @@ import Data.List
 import Data.Maybe
 import Data.Hashable
 
+-- | Convert something to a TamilString
 class TamilShow a where
+  -- | Convert something to a TamilString
   tamilShow :: a -> TamilString
 
+-- | Represents a set of options for a conjugation
 data ChoiceString = ChoiceString
-  { csCommon :: [TamilString]
+  { -- | The common choices, ordered from most common to least common
+    csCommon :: [TamilString]
+    -- | Alternative choices that are valid, but uncommon
   , csUncommon :: [TamilString] }
 
 instance Semigroup ChoiceString where
@@ -30,16 +36,16 @@ instance Show ChoiceString where
 instance IsString ChoiceString where
   fromString = common . fromString
 
+-- | Make a 'ChoiceString' from a single common choice
 common :: TamilString -> ChoiceString
 common s = ChoiceString [s] []
 
-uncommon :: TamilString -> ChoiceString
-uncommon s = ChoiceString [] [s]
-
+-- | Discard any uncommon choices from a 'ChoiceString'
 hide :: ChoiceString -> ChoiceString
 hide (ChoiceString [] u) = ChoiceString u []
 hide (ChoiceString c  _) = ChoiceString c []
 
+-- | Discard any duplicate choices from a 'ChoiceString', keeping only the first occurance
 deduplicate :: ChoiceString -> ChoiceString
 deduplicate (ChoiceString c u) =
   ChoiceString c' u'
@@ -47,6 +53,7 @@ deduplicate (ChoiceString c u) =
       c' = nub c
       u' = nub $ filter (`notElem` c') u
 
+-- | Show a 'ChoiceString' using a function to show the 'TamilString' choices
 showUsing :: (TamilString -> String) -> ChoiceString -> String
 showUsing _ (ChoiceString [] []) = "<none>"
 showUsing showFunction str =
@@ -54,10 +61,12 @@ showUsing showFunction str =
   where
     ChoiceString c u = deduplicate str
 
+-- | Append a 'TamilString' to every choice in a 'ChoiceString'
 (|+) :: ChoiceString -> TamilString -> ChoiceString
 cs |+ s =
   forChoice cs \c -> suffix c s
 
+-- | Join two 'ChoiceString's, taking the cartesian product of the choices
 (|+|) :: ChoiceString -> ChoiceString -> ChoiceString
 ChoiceString xc xu |+| ChoiceString yc yu =
   ChoiceString cc (cu ++ uc ++ uu)
@@ -68,36 +77,44 @@ ChoiceString xc xu |+| ChoiceString yc yu =
     uc = suffix' xu yc
     uu = suffix' xu yu
 
+-- | Does both 'forChoice' and 'filterChoice' at once, requiring only one pass
 filterMapChoice :: ChoiceString -> (TamilString -> Maybe TamilString) -> ChoiceString
 filterMapChoice (ChoiceString c u) f =
   ChoiceString (mapMaybe f c) (mapMaybe f u)
 
+-- | Filter choices in a 'ChoiceString', only keeping those that match a predicate
 filterChoice :: ChoiceString -> (TamilString -> Bool) -> ChoiceString
 filterChoice (ChoiceString c u) pred =
   ChoiceString (filter pred c) (filter pred u)
 
+-- | Modify each choice in a 'ChoiceString'
 forChoice :: ChoiceString -> (TamilString -> TamilString) -> ChoiceString
 forChoice (ChoiceString c u) f =
   ChoiceString (map f c) (map f u)
 
+-- | Get a list of the choices in a 'ChoiceString' ranked by how common they are (no duplicates)
 allChoices :: ChoiceString -> [TamilString]
 allChoices str = c ++ u
   where
     ChoiceString c u = deduplicate str
 
+-- | Collapse a 'ChoiceString' into its most common choice
 collapse :: ChoiceString -> TamilString
 collapse (ChoiceString (x:_) _) = x
 collapse (ChoiceString _ (x:_)) = x
 collapse (ChoiceString _ _) = error "collapse: no valid choices"
 
+-- | Promote an uncommon choice into a common one in a 'ChoiceString' if there are no common choices
 promote :: ChoiceString -> ChoiceString
 promote (ChoiceString [] (c:u)) =
   ChoiceString [c] u
 promote other = other
 
+-- | Demote all common choices to uncommon ones in a 'ChoiceString'
 demote :: ChoiceString -> ChoiceString
 demote (ChoiceString c u) = ChoiceString [] (c ++ u)
 
+-- | Helper function to split a string around places where a predicate is true
 splitWith :: (Char -> Bool) -> String -> [String]
 splitWith isBreak s =
   case dropWhile isBreak s of
@@ -106,6 +123,7 @@ splitWith isBreak s =
       let (w, s'') = break isBreak s' in
       w : splitWith isBreak s''
 
+-- | Split a string, allowing hypens as separators (and commas and spaces)
 splitHyphen :: String -> [String]
 splitHyphen = splitWith \case
   '-' -> True
@@ -113,9 +131,11 @@ splitHyphen = splitWith \case
   ' ' -> True
   _   -> False
 
+-- | Split a string around a single specific character
 split :: Char -> String -> [String]
 split = splitWith . (==)
 
+-- | Represents the length of a vowel sound
 data VowelLength
   = Short
   | Long
@@ -123,6 +143,7 @@ data VowelLength
 
 instance Hashable VowelLength
 
+-- | Represents a Tamil vowel
 data Vowel
   = A !VowelLength
   | I !VowelLength
@@ -150,39 +171,7 @@ instance Show Vowel where
     O Long  -> "ஓ (O)"
     Au      -> "ஔ (au)"
 
-vowelInitial :: Vowel -> Char
-vowelInitial = \case
-  A Short -> 'அ'
-  A Long  -> 'ஆ'
-  I Short -> 'இ'
-  I Long  -> 'ஈ'
-  U Short -> 'உ'
-  U Long  -> 'ஊ'
-  E Short -> 'எ'
-  E Long  -> 'ஏ'
-  Ai      -> 'ஐ'
-  O Short -> 'ஒ'
-  O Long  -> 'ஓ'
-  Au      -> 'ஔ'
-
-vowelCombining :: Vowel -> Maybe Char
-vowelCombining = \case
-  A Short -> Nothing
-  A Long  -> Just '\x0bbe'
-  I Short -> Just '\x0bbf'
-  I Long  -> Just '\x0bc0'
-  U Short -> Just '\x0bc1'
-  U Long  -> Just '\x0bc2'
-  E Short -> Just '\x0bc6'
-  E Long  -> Just '\x0bc7'
-  Ai      -> Just '\x0bc8'
-  O Short -> Just '\x0bca'
-  O Long  -> Just '\x0bcb'
-  Au      -> Just '\x0bcc'
-
-pattern Dot :: Char
-pattern Dot = '\x0bcd'
-
+-- | Checks if a vowel is 'Short' in length
 isShortVowel :: Vowel -> Bool
 isShortVowel = \case
   A Short -> True
@@ -192,12 +181,14 @@ isShortVowel = \case
   O Short -> True
   _       -> False
 
+-- | Checks if a vowel is not 'Long' in length
 isShortishVowel :: Vowel -> Bool
 isShortishVowel = \case
   Ai -> True
   Au -> True
   v  -> isShortVowel v
 
+-- | Checks if a 'TamilString' consists of two letters with no long vowels
 isShortish :: TamilString -> Bool
 isShortish (TamilString str) =
   case str of
@@ -212,6 +203,7 @@ isShortish (TamilString str) =
     _ ->
       False
 
+-- | Represents hard (vallinam) consonants
 data Vallinam
   = K
   | Ch
@@ -232,6 +224,7 @@ instance Show Vallinam where
     P          -> "ப் (p/b)"
     RAlveolar  -> "ற் (R)"
 
+-- | Get the paired soft 'Mellinam' consonant for a hard 'Vallinam' consonant
 getPaired :: Vallinam -> Mellinam
 getPaired = \case
   K          -> Ng
@@ -241,6 +234,7 @@ getPaired = \case
   P          -> M
   RAlveolar  -> NAlveolar
 
+-- | Represents soft (mellinam) consonants
 data Mellinam
   = Ng
   | Ny
@@ -261,6 +255,7 @@ instance Show Mellinam where
     M          -> "ம் (m)"
     NAlveolar  -> "ன் (n)"
 
+-- | Represents medium (idaiyinam) consonants
 data Idaiyinam
   = Y
   | R
@@ -281,6 +276,7 @@ instance Show Idaiyinam where
     Zh         -> "ழ் (zh)"
     LRetroflex -> "ள் (L)"
 
+-- | Represents Grantha consonants
 data Grantha
   = J
   | Sh
@@ -299,6 +295,7 @@ instance Show Grantha where
     H   -> "ஹ் (H)"
     SSh -> "ஶ் (SSh)"
 
+-- | Represents a Tamil consonant
 data Consonant
   = Hard !Vallinam
   | Soft !Mellinam
@@ -315,32 +312,7 @@ instance Show Consonant where
     Medium m  -> show m
     Grantha g -> show g
 
-consonantWithA :: Consonant -> Char
-consonantWithA = \case
-  Hard K            -> 'க'
-  Hard Ch           -> 'ச'
-  Hard TRetroflex   -> 'ட'
-  Hard TDental      -> 'த'
-  Hard P            -> 'ப'
-  Hard RAlveolar    -> 'ற'
-  Soft Ng           -> 'ங'
-  Soft Ny           -> 'ஞ'
-  Soft NRetroflex   -> 'ண'
-  Soft NDental      -> 'ந'
-  Soft M            -> 'ம'
-  Soft NAlveolar    -> 'ன'
-  Medium Y          -> 'ய'
-  Medium R          -> 'ர'
-  Medium LAlveolar  -> 'ல'
-  Medium V          -> 'வ'
-  Medium Zh         -> 'ழ'
-  Medium LRetroflex -> 'ள'
-  Grantha J         -> 'ஜ'
-  Grantha Sh        -> 'ஷ'
-  Grantha S         -> 'ஸ'
-  Grantha H         -> 'ஹ'
-  Grantha SSh       -> 'ஶ'
-
+-- | Checks if a consonant is one that is commonly doubled with a U added
 mayDouble :: Consonant -> Bool
 mayDouble = \case
   Soft _            -> True
@@ -348,6 +320,7 @@ mayDouble = \case
   Medium LAlveolar  -> True
   _                 -> False
 
+-- | Represents a Tamil letter
 data TamilLetter
   = Vowel !Vowel
   | Consonant !Consonant
@@ -362,6 +335,7 @@ instance Show TamilLetter where
     Consonant c -> show c
     Aaydham     -> "ஃ (K)"
 
+-- | Represents a sequence of 'TamilLetter's, stored in reversed order to make appending faster
 newtype TamilString = TamilString
   { -- | A reversed list of letters
     untamil :: [TamilLetter] }
@@ -380,6 +354,7 @@ instance IsString TamilString where
       Right res ->
         res
 
+-- | Parse a 'TamilString' for use as a suffix (see 'parseTamil' for parsing words)
 parseTamilSuffix :: String -> Either String TamilString
 parseTamilSuffix str = TamilString <$> foldM convert [] str
   where
@@ -528,7 +503,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
             -- Otherwise, the marking looks like an L
             consonantA $ Medium LRetroflex
 
-      Dot ->
+      '\x0bcd' ->
         case str of
           Vowel (A Short) : rest ->
             Right rest
@@ -625,10 +600,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
             _ ->
               consonant c
 
-parseTamil :: String -> Either String TamilString
-parseTamil str =
-  convertInitialN <$> parseTamilSuffix str
-
+-- | If a string starts with an N, treat it as dental instead of alveolar
 convertInitialN :: TamilString -> TamilString
 convertInitialN =
   TamilString . go . untamil
@@ -637,6 +609,12 @@ convertInitialN =
     go [Consonant (Soft NAlveolar)] = [Consonant $ Soft NDental]
     go (ch : rest) = ch : go rest
 
+-- | Combines 'parseTamilSuffix' and 'convertInitialN' to parse a Tamil word
+parseTamil :: String -> Either String TamilString
+parseTamil str =
+  convertInitialN <$> parseTamilSuffix str
+
+-- | Convert a 'TamilString' to Latin letters
 toLatin :: TamilString -> String
 toLatin (TamilString str) =
   case str of
@@ -752,15 +730,66 @@ toLatin (TamilString str) =
       where
         go' rest str = go (str ++ acc) rest
 
+-- | Convert a 'TamilString' to Tamil letters in Unicode
 toTamil :: TamilString -> String
 toTamil (TamilString str) =
   go "" str
   where
+    vowelCombining = \case
+      A Short -> Nothing
+      A Long  -> Just '\x0bbe'
+      I Short -> Just '\x0bbf'
+      I Long  -> Just '\x0bc0'
+      U Short -> Just '\x0bc1'
+      U Long  -> Just '\x0bc2'
+      E Short -> Just '\x0bc6'
+      E Long  -> Just '\x0bc7'
+      Ai      -> Just '\x0bc8'
+      O Short -> Just '\x0bca'
+      O Long  -> Just '\x0bcb'
+      Au      -> Just '\x0bcc'
+    vowelInitial = \case
+      A Short -> 'அ'
+      A Long  -> 'ஆ'
+      I Short -> 'இ'
+      I Long  -> 'ஈ'
+      U Short -> 'உ'
+      U Long  -> 'ஊ'
+      E Short -> 'எ'
+      E Long  -> 'ஏ'
+      Ai      -> 'ஐ'
+      O Short -> 'ஒ'
+      O Long  -> 'ஓ'
+      Au      -> 'ஔ'
+    consonantWithA = \case
+      Hard K            -> 'க'
+      Hard Ch           -> 'ச'
+      Hard TRetroflex   -> 'ட'
+      Hard TDental      -> 'த'
+      Hard P            -> 'ப'
+      Hard RAlveolar    -> 'ற'
+      Soft Ng           -> 'ங'
+      Soft Ny           -> 'ஞ'
+      Soft NRetroflex   -> 'ண'
+      Soft NDental      -> 'ந'
+      Soft M            -> 'ம'
+      Soft NAlveolar    -> 'ன'
+      Medium Y          -> 'ய'
+      Medium R          -> 'ர'
+      Medium LAlveolar  -> 'ல'
+      Medium V          -> 'வ'
+      Medium Zh         -> 'ழ'
+      Medium LRetroflex -> 'ள'
+      Grantha J         -> 'ஜ'
+      Grantha Sh        -> 'ஷ'
+      Grantha S         -> 'ஸ'
+      Grantha H         -> 'ஹ'
+      Grantha SSh       -> 'ஶ'
     go acc str =
       case str of
         [] -> acc
         Consonant c : rest ->
-          go (consonantWithA c : Dot : acc) rest
+          go (consonantWithA c : '\x0bcd' : acc) rest
         Vowel v : Consonant c : rest ->
           case vowelCombining v of
             Nothing ->
@@ -772,6 +801,7 @@ toTamil (TamilString str) =
         Aaydham : rest ->
           go ('ஃ' : acc) rest
 
+-- | Convert a 'TamilString' to a normalized form for comparison purposes
 normalize :: TamilString -> TamilString
 normalize =
   TamilString . map go . untamil
@@ -794,6 +824,7 @@ normalize =
       Aaydham                       -> Consonant $ Hard K
       other -> other
 
+-- | Categorize consonants into 5 classes based on which letters can follow them (or always)
 data FollowClass
   = FollowClassA
   | FollowClassB
@@ -803,6 +834,7 @@ data FollowClass
   | FollowClassAlways
   deriving Eq
 
+-- | Finds the 'FollowClass' for a consonant
 getFollowClass :: Consonant -> FollowClass
 getFollowClass = \case
   Hard K            -> FollowClassA
@@ -825,6 +857,7 @@ getFollowClass = \case
   Medium LRetroflex -> FollowClassD
   Grantha _         -> FollowClassAlways
 
+-- | Finds which 'FollowClass'es can precede a consonant
 getPreceding :: Consonant -> [FollowClass]
 getPreceding = \case
   Hard K            -> allowCDE
@@ -854,6 +887,7 @@ getPreceding = \case
     allowBDE  = FollowClassB : allowDE
     allowAll  = FollowClassA : FollowClassB : allowCDE
 
+-- | Check if a junction between two consonants is allowed
 allowJunction :: Consonant -> Consonant -> Bool
 allowJunction (Medium Zh) (Medium Zh) = False
 allowJunction (Soft s) (Hard h)
@@ -863,6 +897,8 @@ allowJunction first next
   | otherwise =
     getFollowClass first `elem` getPreceding next
 
+-- | If a junction isn't allowed, try to find an alternative junction that would be allowed
+-- (and check if it should convert automatically when adding suffixes)
 getAlternativeJunction :: Consonant -> Consonant -> Maybe (Bool, Consonant, Consonant)
 getAlternativeJunction (Soft M) (Hard h) =
   Just (True, Soft $ getPaired h, Hard h)
@@ -885,6 +921,18 @@ getAlternativeJunction end (Soft NDental) =
     _                 -> Nothing
 getAlternativeJunction _ _ = Nothing
 
+-- | Find all consonant clusters in a 'TamilString'
+getConsonantClusters :: TamilString -> [[Consonant]]
+getConsonantClusters = go [] [] . untamil
+  where
+    go cluster clusters = \case
+      [] -> cluster : clusters
+      (Consonant c : rest) ->
+        go (c : cluster) clusters rest
+      (_ : rest) ->
+        go [] (cluster : clusters) rest
+
+-- | Check if a set of consonants can appear directly next to each other without a separating vowel
 validateConsonantCluster :: [Consonant] -> Bool
 validateConsonantCluster [] = True
 validateConsonantCluster [_] = True
@@ -896,6 +944,7 @@ validateConsonantCluster [_, Grantha _, _] = True
 validateConsonantCluster [_, _, Grantha _] = True
 validateConsonantCluster _ = False
 
+-- | Check if a 'TamilString' is valid (only has valid consonant clusters)
 validateTamil :: TamilString -> Either String ()
 validateTamil str = do
   go $ reverse $ untamil str
@@ -908,8 +957,14 @@ validateTamil str = do
     showCluster cluster =
       let str = TamilString $ map Consonant $ reverse cluster in
       toTamil str ++ " (" ++ toLatin str ++ ")"
+    go [Aaydham] =
+      Left $ "word cannot end in " ++ show Aaydham
     go (current : rest@(next : _)) =
       case (current, next) of
+        (Aaydham, Aaydham) ->
+          Left $ show Aaydham ++ " cannot be doubled"
+        (Aaydham, Vowel _) ->
+          Left $ show Aaydham ++ " cannot appear before vowel"
         (Vowel _, Vowel _) ->
           Left "vowel cannot immediately follow vowel"
         (Consonant a, Consonant b) | not $ allowJunction a b ->
@@ -924,62 +979,49 @@ validateTamil str = do
         _ -> go rest
     go _ = Right ()
 
+-- | Combines 'parseTamil' and 'validateTamil'
 parseAndValidateTamil :: String -> Either String TamilString
 parseAndValidateTamil str = do
   word <- parseTamil str
   validateTamil word
   return word
 
-getConsonantClusters :: TamilString -> [[Consonant]]
-getConsonantClusters = go [] [] . untamil
-  where
-    go cluster clusters = \case
-      [] -> cluster : clusters
-      (Consonant c : rest) ->
-        go (c : cluster) clusters rest
-      (_ : rest) ->
-        go [] (cluster : clusters) rest
-
-fromLetter :: TamilLetter -> TamilString
-fromLetter = TamilString . (: [])
-
-append :: TamilString -> TamilString -> TamilString
-append (TamilString root) (TamilString suffix) =
-  TamilString $ suffix ++ root
-
-appendLetter :: TamilString -> TamilLetter -> TamilString
-appendLetter (TamilString root) suffix =
-  TamilString $ suffix : root
-
+-- | Checks if a 'TamilString' consists of a single consonant or vowel
 isSingleLetter :: TamilString -> Bool
 isSingleLetter = \case
   TamilString [_] -> True
   _ -> False
 
+-- | Checks if a 'TamilString' ends in a hard 'Vallinam' consonant
 endsInHardConsonant :: TamilString -> Bool
 endsInHardConsonant = \case
   TamilString (Consonant (Hard _) : _) -> True
   _ -> False
 
+-- | Checks if a 'TamilString' ends in a soft 'Mellinam' consonant
 endsInSoftConsonant :: TamilString -> Bool
 endsInSoftConsonant = \case
   TamilString (Consonant (Soft _) : _) -> True
   _ -> False
 
+-- | Checks if a 'TamilString' ends in a consonant that 'mayDouble'
 endsInDoublingConsonant :: TamilString -> Bool
 endsInDoublingConsonant = \case
   TamilString (Consonant c : _) -> mayDouble c
   _ -> False
 
+-- | Checks if a 'TamilString' ends in a 'Long' vowel
 endsInLongVowel :: TamilString -> Bool
 endsInLongVowel = \case
   TamilString (Vowel v : _) -> not $ isShortishVowel v
   _ -> False
 
+-- | Tries to remove a suffix from a 'TamilString', returning the rest of the string if successful
 stripSuffix :: TamilString -> TamilString -> Maybe TamilString
 stripSuffix (TamilString suffix) (TamilString str) =
   TamilString <$> stripPrefix suffix str
 
+-- | Replace the last letter in a 'TamilString' with a suffix
 replaceLastLetter :: TamilString -> TamilString -> TamilString
 replaceLastLetter (TamilString root) replacement =
   case root of
@@ -997,6 +1039,12 @@ replaceLastLetter (TamilString root) replacement =
         _ ->
           suffix (TamilString rest) replacement
 
+-- | Append a 'TamilString' to another 'TamilString', ignoring suffixing rules
+append :: TamilString -> TamilString -> TamilString
+append (TamilString root) (TamilString suffix) =
+  TamilString $ suffix ++ root
+
+-- | Append a 'TamilString' to another 'TamilString', inserting consonants or doubling letters as necessary
 suffix :: TamilString -> TamilString -> TamilString
 suffix (TamilString root) (TamilString suffix) =
   TamilString $ go root suffix
