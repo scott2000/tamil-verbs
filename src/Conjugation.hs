@@ -57,6 +57,7 @@ allThirdPersonSubjects =
 vRelativeSuffix :: ThirdPersonSubject -> ChoiceString
 vRelativeSuffix = \case
   Avan            -> "On"
+  Aval            -> "OL"
   Avar            -> "Or"
   Irrational Adhu -> "adhu"
   _               -> mempty
@@ -158,7 +159,7 @@ usingAvaiSuffix subject f =
       (f False |+ "aar") <> demote (f True |+ "ar")
     -- This special form is only used in formal literature
     Third Avargal ->
-      (f False |+ "aargaL") <> demote (f True |+ "ar")
+      (f False |+ "aargaL") <> (f True |+ "ar")
     -- Avai requires this form instead of -ana
     Third (Irrational Avai) ->
       f True |+ "a"
