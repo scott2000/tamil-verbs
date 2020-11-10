@@ -149,10 +149,20 @@ simpleSuffix = \case
 usingAvaiSuffix :: Subject -> (Bool -> ChoiceString) -> ChoiceString
 usingAvaiSuffix subject f =
   case subject of
+    -- These specal forms are valid, but not commonly used
+    Third Avan ->
+      (f False |+ "aan") <> demote (f True |+ "an")
+    Third Aval ->
+      (f False |+ "aaL") <> demote (f True |+ "aL")
+    Third Avar ->
+      (f False |+ "aar") <> demote (f True |+ "ar")
+    -- This special form is only used in formal literature
     Third Avargal ->
-      (f False |+ "aargaL") <> (f True |+ "ar")
+      (f False |+ "aargaL") <> demote (f True |+ "ar")
+    -- Avai requires this form instead of -ana
     Third (Irrational Avai) ->
       f True |+ "a"
+    -- Everything else should take a simple suffix
     other ->
       f False |+ simpleSuffix other
 
