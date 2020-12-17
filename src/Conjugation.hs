@@ -130,42 +130,39 @@ makeRespectful = \case
   Third Avargal -> Just $ Third Avargal
   _ -> Nothing
 
--- | A single suffix that is common between tenses
-simpleSuffix :: Subject -> TamilString
-simpleSuffix = \case
-  Naan                    -> "En"
-  Naam                    -> "Om"
-  Naangal                 -> "Om"
-  Nee                     -> "aay"
-  Neer                    -> "eer"
-  Neengal                 -> "eergaL"
-  Third Avan              -> "aan"
-  Third Aval              -> "aaL"
-  Third Avar              -> "aar"
-  Third Avargal           -> "aargaL"
-  Third (Irrational Adhu) -> "adhu"
-  Third (Irrational Avai) -> "ana"
+-- | Apply a suffix that doesn't have a special case for avai
+commonSuffix :: Subject -> ChoiceString -> ChoiceString
+commonSuffix subject root = usingAvaiSuffix subject \case
+  False -> root
+  True  -> root |+ "an"
 
 -- | Calls the provided function with @False@ for non-avai suffixes and @True@ for avai suffixes and then joins them
 usingAvaiSuffix :: Subject -> (Bool -> ChoiceString) -> ChoiceString
 usingAvaiSuffix subject f =
   case subject of
-    -- These specal forms are valid, but not commonly used
+    Naan    -> simple "En"
+    Naam    -> simple "Om"
+    Naangal -> simple "Om"
+    Nee     -> simple "aay"
+    Neer    -> simple "eer"
+    Neengal -> simple "eergaL"
+    -- These specal forms are occaisionally used in formal literature
     Third Avan ->
       (f False |+ "aan") <> demote (f True |+ "an")
     Third Aval ->
       (f False |+ "aaL") <> demote (f True |+ "aL")
     Third Avar ->
       (f False |+ "aar") <> demote (f True |+ "ar")
-    -- This special form is only used in formal literature
     Third Avargal ->
-      (f False |+ "aargaL") <> (f True |+ "ar")
+      (f False |+ "aargaL") <> demote (f True |+ "ar")
     -- Avai requires this form instead of -ana
     Third (Irrational Avai) ->
       f True |+ "a"
-    -- Everything else should take a simple suffix
-    other ->
-      f False |+ simpleSuffix other
+    -- Adhu's irregularities are handled separately
+    Third (Irrational Adhu) ->
+      simple "adhu"
+  where
+    simple = (f False |+)
 
 -- | Gets the past tense stem of the verb
 getPast :: Verb -> ChoiceString
@@ -488,10 +485,12 @@ conjugateFinite tense subject verb =
           getPast verb
     (Present, _, _) ->
       usingAvaiSuffix subject $ getPresent verb
-    (Future, _, Third (Irrational _)) ->
+    (Future, _, Third (Irrational Adhu)) ->
       getFutureAdhu verb
+    (Future, _, Third (Irrational Avai)) ->
+      getFuture verb |+ "ana" <> getFutureAdhu verb
     (Future, _, _) ->
-      getFuture verb |+ simpleSuffix subject
+      commonSuffix subject $ getFuture verb
 
 -- | Conjugate a verb as an adjective
 conjugateAdjective :: TenseConjugation -> Verb -> ChoiceString
@@ -596,7 +595,7 @@ conjugateNegative conjugation verb =
     NegativeClassical (Third (Irrational irrational)) ->
       getNegativeFutureIrrational irrational verb
     NegativeClassical subject ->
-      getRespectfulCommandRoot verb |+ simpleSuffix subject
+      commonSuffix subject $ getRespectfulCommandRoot verb
     NegativeAdjective ->
       getNegativeFutureAdhuRoot verb |+| ChoiceString ["aadha"] ["aa"]
     NegativeRelative subject ->

@@ -5,6 +5,7 @@ import TamilString
 
 import Control.Monad
 
+import Data.String
 import Data.List
 import Data.Char
 import Data.Hashable
@@ -112,6 +113,47 @@ parseFlagChoice s =
       checkValid "flag" str parsed
       return parsed
 
+-- | Parses a 'VerbDefinition' with an optional note
+parseDefinition :: String -> Either String VerbDefinition
+parseDefinition = go
+  where
+    go [] =
+      Right $ VerbDefinition "" Nothing
+    go ('(':rest) =
+      (VerbDefinition "" . Just) <$> parseNote rest
+    go (' ':rest) = do
+      def <- go rest
+      return $
+        case def of
+          VerbDefinition def@(_:_) note ->
+            VerbDefinition (' ' : def) note
+          _ -> def
+    go (ch:rest) = do
+      checkChar ch
+      VerbDefinition def note <- go rest
+      return $ VerbDefinition (ch : def) note
+
+    parseNote [] =
+      Left "unclosed parentheses in note for definition"
+    parseNote [')'] =
+      Right ""
+    parseNote ('(':_) =
+      Left "too many opening parentheses in note for definition"
+    parseNote (')':')':_) =
+      Left "too many closing parentheses in note for definition"
+    parseNote (')':_) =
+      Left "note must come at the end of a definition"
+    parseNote (' ':rest) =
+      (' ' :) <$> parseNote rest
+    parseNote (ch:rest) = do
+      checkChar ch
+      (ch :) <$> parseNote rest
+
+    checkChar ch
+      | isAlpha ch = Right ()
+      | otherwise =
+        Left "verb definitions cannot contain special characters, only [a-z]"
+
 -- | Checks if a 'TamilString' is valid if it wasn't written in Tamil letters
 checkValid :: String -> String -> TamilString -> Either String ()
 checkValid kind unparsed str
@@ -144,11 +186,9 @@ parseVerb s =
             Left "expected at least one definition in second section of verb"
           ["???"] ->
             Right verb
-          verbDefinitions ->
-            if any (any \x -> not (isAlpha x) && x /= ' ') verbDefinitions then
-              Left "verb definitions cannot contain special characters, only [a-z]"
-            else
-              Right verb { verbDefinitions }
+          definitions -> do
+            verbDefinitions <- mapM parseDefinition definitions
+            return verb { verbDefinitions }
       foldM addFlag verb $ map words flags
     _ ->
       Left "missing definition for verb"
@@ -237,6 +277,23 @@ parseAllVerbs file =
                   let err = "syntax error in line " ++ show n ++ ": " ++ e in
                   go rest n' (err:errs) verbs
 
+-- | Represents a definition of a verb
+data VerbDefinition = VerbDefinition
+  { -- | The definition itself
+    vDefinition :: String
+    -- | A note that goes along with the definition
+  , vDefinitionNote :: Maybe String }
+
+instance IsString VerbDefinition where
+  fromString def = VerbDefinition def Nothing
+
+instance Show VerbDefinition where
+  show (VerbDefinition def note) =
+    case note of
+      Nothing -> def
+      Just note ->
+        def ++ " (" ++ note ++ ")"
+
 -- | Represents a verb that can be conjugated
 data Verb = Verb
   { -- | The basic root of the verb (used for commands)
@@ -244,7 +301,7 @@ data Verb = Verb
     -- | The prefix to add to every conjugation (used for compound verbs)
   , verbPrefix :: TamilString
     -- | The definitions of the verb in English
-  , verbDefinitions :: [String]
+  , verbDefinitions :: [VerbDefinition]
     -- | 'True' if the verb should be conjugated in the future adhu primarily
   , verbDefective :: Bool
     -- | An irregular adverb/past (only for classes 1 and 2)
@@ -272,34 +329,13 @@ instance Ord Verb where
     <> verbPrefix a `compare` verbPrefix b
 
 instance Show Verb where
-  show Verb { .. } =
-    show verbClass ++ " " ++ combinedRoot ++ ". " ++ definitions ++ flags
+  show v@Verb { .. } =
+    show verbClass ++ " " ++ getFormattedRoot v ++ ". " ++ definitions ++ flags
     where
       definitions =
         case verbDefinitions of
           [] -> "???"
-          _  -> intercalate ", " verbDefinitions
-      combinedRoot =
-        case verbPrefix of
-          TamilString [] ->
-            toLatinIfValid verbRoot
-          _ ->
-            case validateTamil (suffix verbPrefix verbRoot) of
-              Left _ ->
-                -- If the combined root isn't valid, put it in Tamil
-                toTamil verbPrefix ++ " " ++ toTamil verbRoot
-              Right _ ->
-                toLatinIfValid verbPrefix ++ " " ++
-                  case toLatinIfValid verbRoot of
-                    -- Convert initial 's' to 'ch' if the prefix ends in a hard consonant
-                    ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
-                      "ch" ++ rest
-                    root ->
-                      root
-      toLatinIfValid str =
-        case validateTamil str of
-          Left _  -> toTamil str
-          Right _ -> toLatin str
+          _  -> intercalate ", " $ map show verbDefinitions
       addFlag _ False s = s
       addFlag f True s = ". " ++ f ++ s
       addKey _ Nothing s = s
@@ -326,6 +362,26 @@ defaultVerb = Verb
   , verbInfinitiveRoot = Nothing
   , verbRespectfulCommandRoot = Nothing
   , verbClass = undefined }
+
+-- | Formats the 'Verb' root as it would be shown in a 'VerbList'
+getFormattedRoot :: Verb -> String
+getFormattedRoot Verb { .. } =
+  case verbPrefix of
+    TamilString [] ->
+      toLatinIfValid verbRoot
+    _ ->
+      case validateTamil (suffix verbPrefix verbRoot) of
+        Left _ ->
+          -- If the combined root isn't valid, put it in Tamil
+          toTamil verbPrefix ++ " " ++ toTamil verbRoot
+        Right _ ->
+          toLatinIfValid verbPrefix ++ " " ++
+            case toLatinIfValid verbRoot of
+              -- Convert initial 's' to 'ch' if the prefix ends in a hard consonant
+              ('s':rest) | TamilString (Consonant (Hard _) : _) <- verbPrefix ->
+                "ch" ++ rest
+              root ->
+                root
 
 -- | Gets the possible roots for a 'Verb' (including alternative forms)
 getRoot :: Verb -> ChoiceString
@@ -373,12 +429,11 @@ addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
   | otherwise = VerbList
     { allVerbs = Set.insert v allVerbs
     , byRoot = withAllNames
-    , byDefinition = foldr insertVerb byDefinition $ verbDefinitions v }
+    , byDefinition = foldr insertVerb byDefinition $ map vDefinition $ verbDefinitions v }
   where
     v = basicVerb
       { verbRoot = convertInitialN $ verbRoot basicVerb
-      , verbPrefix = convertInitialN $ verbPrefix basicVerb
-      , verbDefinitions = map stripTo $ verbDefinitions basicVerb }
+      , verbPrefix = convertInitialN $ verbPrefix basicVerb }
 
     withAllNames =
       foldr insertVerb byRoot $ allChoices allNames

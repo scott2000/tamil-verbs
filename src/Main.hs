@@ -15,6 +15,7 @@ import Data.List
 import Data.Char
 
 import qualified Data.Set as Set
+import qualified Data.HashMap.Strict as HashMap
 
 -- | Load a 'VerbList' from a given file
 loadVerbList :: FilePath -> IO VerbList
@@ -108,6 +109,14 @@ main = do
               let verbList' = addVerb verb verbList
               putStrLn $ "verb added (" ++ count verbList' ++ " verbs)"
               startInteractive verbList'
+        (":list":"def":_) -> do
+          -- List by definition instead of just giving the verb list
+          forM_ (sort $ HashMap.toList $ byDefinition verbList) \(def, verbs) ->
+            putStrLn $
+              "[" ++ show (length verbs) ++ "] "
+              ++ def ++ ": "
+              ++ intercalate ", " (map getFormattedRoot $ sort verbs)
+          startInteractive verbList
         (":list":_) -> do
           mapM_ print $ Set.toAscList $ allVerbs verbList
           startInteractive verbList

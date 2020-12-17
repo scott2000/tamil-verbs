@@ -559,7 +559,7 @@ lookupVerb verbList showTamil allowGuess word =
         Right tamil ->
           case HashMap.lookup tamil $ byRoot verbList of
             Just verbs ->
-              Right $ map (\verb -> (intercalate ", " $ verbDefinitions verb, verb)) verbs
+              Right $ map (\verb -> (intercalate ", " $ map show $ verbDefinitions verb, verb)) verbs
             Nothing ->
               case validateTamil tamil of
                 Left err ->

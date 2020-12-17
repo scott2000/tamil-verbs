@@ -196,6 +196,10 @@ isShortish (TamilString str) =
       isShortishVowel v
     [Consonant _, Vowel v, Consonant _] ->
       isShortishVowel v
+    [Vowel v] ->
+      isShortishVowel v
+    [Vowel v, Consonant _] ->
+      isShortishVowel v
     [Vowel v0, Consonant _, Vowel v1] ->
       isShortishVowel v0 && isShortishVowel v1
     [Vowel v0, Consonant _, Vowel v1, Consonant _] ->
@@ -863,7 +867,7 @@ getPreceding = \case
   Hard K            -> allowCDE
   Hard Ch           -> allowCDE
   Hard TRetroflex   -> allowNone
-  Hard TDental      -> allowE
+  Hard TDental      -> allowDE
   Hard P            -> allowCDE
   Hard RAlveolar    -> allowNone
   Soft Ng           -> allowE
@@ -902,15 +906,10 @@ allowJunction first next
 getAlternativeJunction :: Consonant -> Consonant -> Maybe (Bool, Consonant, Consonant)
 getAlternativeJunction (Soft M) (Hard h) =
   Just (True, Soft $ getPaired h, Hard h)
-getAlternativeJunction end (Hard TDental) =
-  case end of
-    Hard TRetroflex   -> Just (True,  Hard TRetroflex, Hard TRetroflex)
-    Hard RAlveolar    -> Just (True,  Hard RAlveolar,  Hard RAlveolar)
-    Soft NRetroflex   -> Just (False, Soft NRetroflex, Hard TRetroflex)
-    Soft NAlveolar    -> Just (False, Soft NAlveolar,  Hard RAlveolar)
-    Medium LAlveolar  -> Just (False, Hard RAlveolar,  Hard RAlveolar)
-    Medium LRetroflex -> Just (False, Hard TRetroflex, Hard TRetroflex)
-    _                 -> Nothing
+getAlternativeJunction (Hard TRetroflex) (Hard TDental) =
+  Just (True,  Hard TRetroflex, Hard TRetroflex)
+getAlternativeJunction (Hard RAlveolar) (Hard TDental) =
+  Just (True,  Hard RAlveolar, Hard RAlveolar)
 getAlternativeJunction end (Soft NDental) =
   case end of
     Soft NRetroflex   -> Just (True,  Soft NRetroflex, Soft NRetroflex)
@@ -985,6 +984,13 @@ parseAndValidateTamil str = do
   word <- parseTamil str
   validateTamil word
   return word
+
+-- | Calls 'toLatin' if the the 'TamilString' is valid, otherwise 'toTamil'
+toLatinIfValid :: TamilString -> String
+toLatinIfValid str =
+  case validateTamil str of
+    Left _  -> toTamil str
+    Right _ -> toLatin str
 
 -- | Checks if a 'TamilString' consists of a single consonant or vowel
 isSingleLetter :: TamilString -> Bool
