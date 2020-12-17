@@ -319,7 +319,7 @@ getFutureAdhu verb =
           in
             if endsInLongVowel stem then
                 if isSingleLetter stem then
-                  ChoiceString [withoutGu, withGu] []
+                  ChoiceString [withGu, withoutGu] []
                 else
                   case verbClass verb of
                     Class3 ->
