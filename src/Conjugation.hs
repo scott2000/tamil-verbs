@@ -59,6 +59,7 @@ vRelativeSuffix = \case
   Avan            -> "On"
   Aval            -> "OL"
   Avar            -> "Or"
+  Avargal         -> "OrgaL"
   Irrational Adhu -> "adhu"
   _               -> mempty
 
