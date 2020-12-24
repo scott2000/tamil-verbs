@@ -382,6 +382,8 @@ guessNoInfo (TamilString str) =
       [basicClass $ Class1 Weak]
     Consonant c : Vowel v : _ | mayDouble c, not $ isShortishVowel v ->
       [basicClass $ Class1 Strong]
+    Vowel (I Short) : Consonant (Medium V) : _ ->
+      [basicClass $ Class1 Strong]
     _
       | isShortish reducedRoot ->
         case reducedStr of
