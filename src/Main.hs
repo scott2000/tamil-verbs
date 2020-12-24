@@ -19,6 +19,7 @@ import qualified Data.HashMap.Strict as HashMap
 
 -- | Load a 'VerbList' from a given file
 loadVerbList :: FilePath -> IO VerbList
+loadVerbList "" = return defaultVerbList
 loadVerbList filePath = do
   (errs, verbList) <- parseAllVerbs <$> readFile filePath
   mapM_ putStrLn errs
@@ -35,7 +36,11 @@ main = do
   verbList <-
     getArgs >>= \case
       [] ->
-        return defaultVerbList
+        lookupEnv "TAMIL_VERB_LIST" >>= \case
+          Just filePath ->
+            loadVerbList filePath
+          _ ->
+            return defaultVerbList
       [filePath] ->
         loadVerbList filePath
       _ -> do
@@ -110,12 +115,9 @@ main = do
               putStrLn $ "verb added (" ++ count verbList' ++ " verbs)"
               startInteractive verbList'
         ":list":"def":rest -> do
-          let
-            min =
-              case rest of
-                "dup" : _ -> 1
-                _         -> 0
           -- List by definition instead of just giving the verb list
+          let min = case rest of "dup" : _ -> 1
+                                 _         -> 0
           forM_ (sort $ HashMap.toList $ byDefinition verbList) \(def, verbs) ->
             when (length verbs > min) $
               putStrLn $
@@ -140,7 +142,7 @@ main = do
           putStrLn ":add <verb>     add a single verb"
           putStrLn ":list           list all loaded verbs"
           putStrLn ":clear          clear all loaded verbs"
-          putStrLn ":reset          reset to the default verb list"
+          putStrLn ":reset          reset to the built-in verb list"
           putStrLn ":help           print this message"
           putStrLn ":quit           quit the program"
           startInteractive verbList

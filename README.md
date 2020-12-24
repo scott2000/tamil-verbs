@@ -98,10 +98,11 @@ paDikkiRaay; paDikkindRaay
 ## Vocab lists
 
 There is a built-in vocab list with some very basic verbs, but if you want to
-use your own vocab list, you can load a custom list of verbs by either passing a
-path to the file as a command-line argument, or by using `:load <file>` (see
-`:help` for a list of all commands). This repository also contains an extended
-vocab list called [verbs.txt](verbs.txt) with some more advanced verbs.
+use your own vocab list, you can load a custom list of verbs by passing a path
+to the file as a command-line argument, by setting the `TAMIL_VERB_LIST`
+environment variable, or by using `:load <file>` (see `:help` for a list of all
+commands). This repository also contains an extended vocab list called
+[verbs.txt](verbs.txt) with some more advanced verbs.
 
 The basic format of a verb entry is:
 
