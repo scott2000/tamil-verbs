@@ -302,8 +302,10 @@ instance Show VerbDefinition where
 
 -- | Represents a verb that can be conjugated
 data Verb = Verb
-  { -- | The basic root of the verb (used for commands)
-    verbRoot :: TamilString
+  { -- | The class of the verb
+    verbClass :: VerbClass
+    -- | The basic root of the verb (used for commands)
+  , verbRoot :: TamilString
     -- | The prefix to add to every conjugation (used for compound verbs)
   , verbPrefix :: TamilString
     -- | The definitions of the verb in English
@@ -321,9 +323,7 @@ data Verb = Verb
     -- | An irregular infinitive root (ends in U, not A)
   , verbInfinitiveRoot :: Maybe ChoiceString
     -- | An irregular respectful command root (ends in U)
-  , verbRespectfulCommandRoot :: Maybe ChoiceString
-    -- | The class of the verb
-  , verbClass :: VerbClass }
+  , verbRespectfulCommandRoot :: Maybe ChoiceString }
 
 instance Eq Verb where
   a == b =
@@ -363,7 +363,8 @@ instance Show Verb where
 -- | A 'Verb' with no root, definitions, or class
 defaultVerb :: Verb
 defaultVerb = Verb
-  { verbRoot = undefined
+  { verbClass = undefined
+  , verbRoot = undefined
   , verbPrefix = ""
   , verbDefinitions = []
   , verbNote = ""
@@ -372,8 +373,7 @@ defaultVerb = Verb
   , verbStem = Nothing
   , verbFutureAdhu = Nothing
   , verbInfinitiveRoot = Nothing
-  , verbRespectfulCommandRoot = Nothing
-  , verbClass = undefined }
+  , verbRespectfulCommandRoot = Nothing }
 
 -- | Formats the 'Verb' root as it would be shown in a 'VerbList'
 getFormattedRoot :: Verb -> String
@@ -505,181 +505,152 @@ makeVerbList = foldl' (flip addVerb) emptyVerbList
 
 -- | The default list of verbs to be used when no verb list is provided
 defaultVerbList :: VerbList
-defaultVerbList = makeVerbList
+defaultVerbList = makeVerbList $ concat
   [ -- Class 1 Weak
-    defaultVerb
-      { verbRoot = "saappiDu"
-      , verbDefinitions = ["eat"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "paDu"
-      , verbDefinitions = ["experience", "undergo", "suffer"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "pODu"
-      , verbDefinitions = ["drop", "put", "place"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "viDu"
-      , verbDefinitions = ["let go", "release"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "sey"
-      , verbDefinitions = ["do", "make"]
-      , verbClass = Class1 Weak }
+    setClass (Class1 Weak)
+      [ defaultVerb
+          { verbRoot = "saappiDu"
+          , verbDefinitions = ["eat"] }
+      , defaultVerb
+          { verbRoot = "paDu"
+          , verbDefinitions = ["experience", "undergo", "suffer"] }
+      , defaultVerb
+          { verbRoot = "pODu"
+          , verbDefinitions = ["drop", "put", "place"] }
+      , defaultVerb
+          { verbRoot = "viDu"
+          , verbDefinitions = ["let go", "release"] }
+      , defaultVerb
+          { verbRoot = "sey"
+          , verbDefinitions = ["do", "make"] } ]
+
     -- Class 1 Strong
-  , defaultVerb
-      { verbRoot = "kEL"
-      , verbDefinitions = ["ask", "listen", "hear"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "eDu"
-      , verbDefinitions = ["take", "get"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "kuDi"
-      , verbDefinitions = ["drink"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "koDu"
-      , verbDefinitions = ["give"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paDi"
-      , verbDefinitions = ["study", "read"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paDu"
-      , verbDefinitions = ["lie down", "go to bed"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paar"
-      , verbDefinitions = ["look", "see"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "vai"
-      , verbDefinitions = ["set down", "put", "place"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "muDi"
-      , verbDefinitions = ["finish", "complete"]
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "uDai"
-      , verbDefinitions = ["break"]
-      , verbClass = Class1 Strong }
+  , setClass (Class1 Strong)
+      [ defaultVerb
+          { verbRoot = "kEL"
+          , verbDefinitions = ["ask", "listen", "hear"] }
+      , defaultVerb
+          { verbRoot = "eDu"
+          , verbDefinitions = ["take", "get"] }
+      , defaultVerb
+          { verbRoot = "kuDi"
+          , verbDefinitions = ["drink"] }
+      , defaultVerb
+          { verbRoot = "koDu"
+          , verbDefinitions = ["give"] }
+      , defaultVerb
+          { verbRoot = "paDi"
+          , verbDefinitions = ["study", "read"] }
+      , defaultVerb
+          { verbRoot = "paDu"
+          , verbDefinitions = ["lie down", "go to bed"] }
+      , defaultVerb
+          { verbRoot = "paar"
+          , verbDefinitions = ["look", "see"] }
+      , defaultVerb
+          { verbRoot = "vai"
+          , verbDefinitions = ["set down", "put", "place"] }
+      , defaultVerb
+          { verbRoot = "muDi"
+          , verbDefinitions = ["finish", "complete"] }
+      , defaultVerb
+          { verbRoot = "uDai"
+          , verbDefinitions = ["break"] } ]
+
     -- Class 2 Weak
-  , defaultVerb
-      { verbRoot = "thaa"
-      , verbDefinitions = ["give"]
-      , verbAdverb = Just "thandhu"
-      , verbStem = Just "tharu"
-      , verbRespectfulCommandRoot = Just "thaaru"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "vaa"
-      , verbDefinitions = ["come"]
-      , verbAdverb = Just "vandhu"
-      , verbStem = Just "varu"
-      , verbRespectfulCommandRoot = Just "vaaru"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "koL"
-      , verbDefinitions = ["have", "hold"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "kol"
-      , verbDefinitions = ["kill"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "chel"
-      , verbDefinitions = ["go"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "muDi"
-      , verbDefinitions = ["be finished", "be completed"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "uDai"
-      , verbDefinitions = ["be broken"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "teri"
-      , verbDefinitions = ["be known", "be visible", "be apparent"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "puri"
-      , verbDefinitions = ["be understood"]
-      , verbDefective = True
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "uTkaar"
-      , verbDefinitions = ["sit"]
-      , verbClass = Class2 Weak }
+  , setClass (Class2 Weak)
+      [ defaultVerb
+          { verbRoot = "thaa"
+          , verbDefinitions = ["give"]
+          , verbAdverb = Just "thandhu"
+          , verbStem = Just "tharu"
+          , verbRespectfulCommandRoot = Just "thaaru" }
+      , defaultVerb
+          { verbRoot = "vaa"
+          , verbDefinitions = ["come"]
+          , verbAdverb = Just "vandhu"
+          , verbStem = Just "varu"
+          , verbRespectfulCommandRoot = Just "vaaru" }
+      , defaultVerb
+          { verbRoot = "koL"
+          , verbDefinitions = ["have", "hold"] }
+      , defaultVerb
+          { verbRoot = "kol"
+          , verbDefinitions = ["kill"] }
+      , defaultVerb
+          { verbRoot = "chel"
+          , verbDefinitions = ["go"] }
+      , defaultVerb
+          { verbRoot = "muDi"
+          , verbDefinitions = ["be finished", "be completed"]
+          , verbDefective = True }
+      , defaultVerb
+          { verbRoot = "uDai"
+          , verbDefinitions = ["be broken"]
+          , verbDefective = True }
+      , defaultVerb
+          { verbRoot = "teri"
+          , verbDefinitions = ["be known", "be visible", "be apparent"]
+          , verbDefective = True }
+      , defaultVerb
+          { verbRoot = "puri"
+          , verbDefinitions = ["be understood"]
+          , verbDefective = True }
+      , defaultVerb
+          { verbRoot = "uTkaar"
+          , verbDefinitions = ["sit"] } ]
+
     -- Class 2 Strong
-  , defaultVerb
-      { verbRoot = "nil"
-      , verbDefinitions = ["stop", "stand"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "naDa"
-      , verbDefinitions = ["walk", "happen"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "paRa"
-      , verbDefinitions = ["fly"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "maRa"
-      , verbDefinitions = ["forget"]
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "iru"
-      , verbDefinitions = ["be", "stay"]
-      , verbClass = Class2 Strong }
+  , setClass (Class2 Strong)
+      [ defaultVerb
+          { verbRoot = "nil"
+          , verbDefinitions = ["stop", "stand"] }
+      , defaultVerb
+          { verbRoot = "naDa"
+          , verbDefinitions = ["walk", "happen"] }
+      , defaultVerb
+          { verbRoot = "paRa"
+          , verbDefinitions = ["fly"] }
+      , defaultVerb
+          { verbRoot = "maRa"
+          , verbDefinitions = ["forget"] }
+      , defaultVerb
+          { verbRoot = "iru"
+          , verbDefinitions = ["be", "stay"] } ]
+
     -- Class 3
-  , defaultVerb
-      { verbRoot = "aa"
-      , verbDefinitions = ["become", "happen", "be done"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "pO"
-      , verbDefinitions = ["go", "leave"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "sol"
-      , verbDefinitions = ["say", "tell"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "ODu"
-      , verbDefinitions = ["run"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "thoongu"
-      , verbDefinitions = ["sleep"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "tirumbu"
-      , verbDefinitions = ["turn around", "turn", "return"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "paaDu"
-      , verbDefinitions = ["sing"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "pEsu"
-      , verbDefinitions = ["speak", "talk"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "veTTu"
-      , verbDefinitions = ["cut"]
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "vaangu"
-      , verbDefinitions = ["buy"]
-      , verbClass = Class3 }
-  ]
+  , setClass Class3
+      [ defaultVerb
+          { verbRoot = "aa"
+          , verbDefinitions = ["become", "happen", "be done"] }
+      , defaultVerb
+          { verbRoot = "pO"
+          , verbDefinitions = ["go", "leave"] }
+      , defaultVerb
+          { verbRoot = "sol"
+          , verbDefinitions = ["say", "tell"] }
+      , defaultVerb
+          { verbRoot = "ODu"
+          , verbDefinitions = ["run"] }
+      , defaultVerb
+          { verbRoot = "thoongu"
+          , verbDefinitions = ["sleep"] }
+      , defaultVerb
+          { verbRoot = "tirumbu"
+          , verbDefinitions = ["turn around", "turn", "return"] }
+      , defaultVerb
+          { verbRoot = "paaDu"
+          , verbDefinitions = ["sing"] }
+      , defaultVerb
+          { verbRoot = "pEsu"
+          , verbDefinitions = ["speak", "talk"] }
+      , defaultVerb
+          { verbRoot = "veTTu"
+          , verbDefinitions = ["cut"] }
+      , defaultVerb
+          { verbRoot = "vaangu"
+          , verbDefinitions = ["buy"] } ] ]
+  where
+    setClass verbClass =
+      map \verb -> verb { verbClass }
 

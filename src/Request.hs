@@ -481,16 +481,16 @@ guessNoInfo (TamilString str) =
     basicClass c =
       ( show c
       , defaultVerb
-        { verbRoot = reducedRoot
-        , verbPrefix = prefixRoot
-        , verbClass = c } )
+        { verbClass = c
+        , verbRoot = reducedRoot
+        , verbPrefix = prefixRoot } )
     defective2W =
       ( show $ Class2 Weak
       , defaultVerb
-          { verbRoot = reducedRoot
+          { verbClass = Class2 Weak
+          , verbRoot = reducedRoot
           , verbPrefix = prefixRoot
-          , verbDefective = True
-          , verbClass = Class2 Weak } )
+          , verbDefective = True } )
 
 -- | Given some root, try to guess how to conjugate the verb, possibly making assumptions due to the form of the root
 guess :: Bool -> VerbList -> TamilString -> [(String, Verb)]
@@ -515,7 +515,7 @@ guess allowNoInfoGuess verbList basicRoot =
         Just rootPrefix ->
           let
             updateVerb v =
-              ( show (verbClass v)
+              ( show $ verbClass v
               , v { verbPrefix = rootPrefix `append` verbPrefix v } )
           in
             map updateVerb $ Set.toList verbs
@@ -649,96 +649,54 @@ processRequest verbList verb conjugation = do
 
 -- | A set of known irregular verb conjugations that can be used when guessing
 irregularVerbs :: VerbList
-irregularVerbs = makeVerbList
-  [ defaultVerb
-      { verbRoot = "pODu"
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "saa"
-      , verbAdverb = Just "settu"
-      , verbFutureAdhu = Just $ ChoiceString ["saagum"] ["saam"]
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "azhu"
-      , verbClass = Class1 Weak }
-  , defaultVerb
-      { verbRoot = "kal"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "vil"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "eDu"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "paar"
-      , verbClass = Class1 Strong }
-  , defaultVerb
-      { verbRoot = "thaakkuRu"
-      , verbAdverb = Just "thaakkuNDu"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "thaa"
-      , verbAdverb = Just "thandhu"
-      , verbStem = Just "tharu"
-      , verbRespectfulCommandRoot = Just "thaaru"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "vaa"
-      , verbAdverb = Just "vandhu"
-      , verbStem = Just "varu"
-      , verbRespectfulCommandRoot = Just "vaaru"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "pOdhu"
-      , verbDefective = True
-      , verbAdverb = Just $ ChoiceString ["pOndhu", "pOrndhu"] []
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "nO"
-      , verbAdverb = Just "nondhu"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "vE"
-      , verbAdverb = Just "vendhu"
-      , verbFutureAdhu = Just "vEgum"
-      , verbInfinitiveRoot = Just $ ChoiceString ["vEgu"] ["vEvu"]
-      , verbRespectfulCommandRoot = Just $ ChoiceString ["vEgu"] ["vEvu"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "kaaN"
-      , verbAdverb = Just "kaNDu"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "en"
-      , verbInfinitiveRoot = Just $ ChoiceString ["enu"] ["ennu"]
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "agal"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "neeL"
-      , verbClass = Class2 Weak }
-  , defaultVerb
-      { verbRoot = "nil"
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "iru"
-      , verbClass = Class2 Strong }
-  , defaultVerb
-      { verbRoot = "aa"
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "pO"
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "sol"
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "paNNu"
-      , verbClass = Class3 }
-  , defaultVerb
-      { verbRoot = "vaar"
-      , verbStem = Just "vaaru"
-      , verbClass = Class3 } ]
+irregularVerbs = makeVerbList $ concat
+  [ -- Class 1 Weak
+    setClass (Class1 Weak)
+      [ defaultVerb { verbRoot = "azhu" }
+      , defaultVerb
+          { verbRoot = "saa"
+          , verbAdverb = Just "settu"
+          , verbFutureAdhu = Just $ ChoiceString ["saagum"] ["saam"] } ]
+
+    -- Class 1 Strong
+  , setClass (Class1 Strong)
+      [ defaultVerb { verbRoot = "kal" }
+      , defaultVerb { verbRoot = "vil" } ]
+
+    -- Class 2 Weak
+  , setClass (Class2 Weak)
+      [ defaultVerb { verbRoot = "agal" }
+      , defaultVerb { verbRoot = "neeL" }
+      , defaultVerb
+          { verbRoot = "thaakkuRu"
+          , verbAdverb = Just "thaakkuNDu" }
+      , defaultVerb
+          { verbRoot = "pOdhu"
+          , verbDefective = True
+          , verbAdverb = Just $ ChoiceString ["pOndhu", "pOrndhu"] [] }
+      , defaultVerb
+          { verbRoot = "nO"
+          , verbAdverb = Just "nondhu" }
+      , defaultVerb
+          { verbRoot = "vE"
+          , verbAdverb = Just "vendhu"
+          , verbFutureAdhu = Just "vEgum"
+          , verbInfinitiveRoot = Just $ ChoiceString ["vEgu"] ["vEvu"]
+          , verbRespectfulCommandRoot = Just $ ChoiceString ["vEgu"] ["vEvu"] }
+      , defaultVerb
+          { verbRoot = "kaaN"
+          , verbAdverb = Just "kaNDu" }
+      , defaultVerb
+          { verbRoot = "en"
+          , verbInfinitiveRoot = Just $ ChoiceString ["enu"] ["ennu"] } ]
+
+        -- Class 3
+      , setClass Class3
+          [ defaultVerb { verbRoot = "paNNu" }
+          , defaultVerb
+              { verbRoot = "vaar"
+              , verbStem = Just "vaaru" } ] ]
+  where
+    setClass verbClass =
+      map \verb -> verb { verbClass }
 

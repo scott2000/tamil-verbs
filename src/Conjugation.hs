@@ -572,14 +572,14 @@ data NegativeConjugation
 -- | A helper verb that is used for 'NegativeFuture' conjugations
 maaTTu :: Verb
 maaTTu = defaultVerb
-  { verbRoot = "maaTTu"
-  , verbClass = Class3 }
+  { verbClass = Class3
+  , verbRoot = "maaTTu" }
 
 -- | A helper verb that is used for 'NegativeConditional' conjugations
 viDu :: Verb
 viDu = defaultVerb
-  { verbRoot = "viDu"
-  , verbClass = Class1 Weak }
+  { verbClass = Class1 Weak
+  , verbRoot = "viDu" }
 
 -- | Get a 'NegativeConjugation' of a 'Verb'
 conjugateNegative :: NegativeConjugation -> Verb -> ChoiceString
