@@ -118,9 +118,9 @@ parseDefinition :: String -> Either String VerbDefinition
 parseDefinition = go
   where
     go [] =
-      Right $ VerbDefinition "" Nothing
+      Right $ VerbDefinition "" ""
     go ('(':rest) =
-      (VerbDefinition "" . Just) <$> parseNote rest
+      (VerbDefinition "") <$> parseNote rest
     go (' ':rest) = do
       def <- go rest
       return $
@@ -210,6 +210,12 @@ parseVerb s =
       | otherwise          = Right verb { verbDefective = True }
     addFlag _ [flag] =
       Left $ "invalid flag for verb: " ++ flag
+    addFlag verb ("note" : rest) =
+      case verbNote verb of
+        "" -> Right verb
+          { verbNote = unwords rest }
+        _ ->
+          Left "verb already has a note associated with it"
     addFlag verb (key : strParts) = do
       choiceStr@(ChoiceString c u) <- parseFlagChoice $ concat strParts
       let
@@ -282,16 +288,16 @@ data VerbDefinition = VerbDefinition
   { -- | The definition itself
     vDefinition :: String
     -- | A note that goes along with the definition
-  , vDefinitionNote :: Maybe String }
+  , vDefinitionNote :: String }
 
 instance IsString VerbDefinition where
-  fromString def = VerbDefinition def Nothing
+  fromString def = VerbDefinition def ""
 
 instance Show VerbDefinition where
   show (VerbDefinition def note) =
     case note of
-      Nothing -> def
-      Just note ->
+      "" -> def
+      note ->
         def ++ " (" ++ note ++ ")"
 
 -- | Represents a verb that can be conjugated
@@ -302,6 +308,8 @@ data Verb = Verb
   , verbPrefix :: TamilString
     -- | The definitions of the verb in English
   , verbDefinitions :: [VerbDefinition]
+    -- | A note associated with a verb
+  , verbNote :: String
     -- | 'True' if the verb should be conjugated in the future adhu primarily
   , verbDefective :: Bool
     -- | An irregular adverb/past (only for classes 1 and 2)
@@ -336,11 +344,14 @@ instance Show Verb where
         case verbDefinitions of
           [] -> "???"
           _  -> intercalate ", " $ map show verbDefinitions
+      addNote _ "" s = s
+      addNote f note s = ". " ++ f ++ " " ++ note ++ s
       addFlag _ False s = s
       addFlag f True s = ". " ++ f ++ s
       addKey _ Nothing s = s
       addKey k (Just c) s = ". " ++ k ++ " " ++ showUsing toLatinIfValid c ++ s
       flags =
+        addNote "note" verbNote $
         addFlag "defect" verbDefective $
         addKey "adv" verbAdverb $
         addKey "stem" verbStem $
@@ -355,6 +366,7 @@ defaultVerb = Verb
   { verbRoot = undefined
   , verbPrefix = ""
   , verbDefinitions = []
+  , verbNote = ""
   , verbDefective = False
   , verbAdverb = Nothing
   , verbStem = Nothing
@@ -382,6 +394,39 @@ getFormattedRoot Verb { .. } =
                 "ch" ++ rest
               root ->
                 root
+
+-- | Checks if a header with definitions is required for a 'Verb' given a user's requested word
+headerRequired :: String -> Verb -> Bool
+headerRequired requested Verb { verbDefinitions, verbNote } =
+  case verbNote of
+    "" -> any hasMatchingNote verbDefinitions
+    _  -> any hasMatching     verbDefinitions
+  where
+    hasMatchingNote VerbDefinition { vDefinition, vDefinitionNote } =
+      not (null vDefinitionNote) && vDefinition == requested
+    hasMatching VerbDefinition { vDefinition } =
+      vDefinition == requested
+
+-- | Formats the 'Verb' root to be displayed to the user, including any notes if necessary
+getReturnedRoot :: (TamilString -> String) -> Verb -> String
+getReturnedRoot showTamil verb =
+  formatted ++
+    case verb of
+      Verb { verbDefinitions = [VerbDefinition { vDefinitionNote = "" }], verbNote = "" } ->
+        -- Since there is a single definition with no notes, it is unnecessary to print the definitions
+        ""
+      _ ->
+        " - " ++ getReturnedDefinitions verb
+  where
+    formatted = showTamil $ suffix (verbPrefix verb) (verbRoot verb)
+
+-- | Formats the definitions of a 'Verb', including any notes
+getReturnedDefinitions :: Verb -> String
+getReturnedDefinitions Verb { verbDefinitions, verbNote } =
+  intercalate ", " (map show verbDefinitions) ++
+    case verbNote of
+      "" -> ""
+      note -> " [" ++ note ++ "]"
 
 -- | Gets the possible roots for a 'Verb' (including alternative forms)
 getRoot :: Verb -> ChoiceString

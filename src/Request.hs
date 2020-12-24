@@ -545,7 +545,7 @@ lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either St
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup (map toLower word) $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (showTamil $ suffix (verbPrefix verb) (verbRoot verb), verb)) verbs
+      Right $ map (\verb -> (getReturnedRoot showTamil verb, verb)) verbs
     Nothing ->
       let notDefinition = Left "cannot find word with that definition" in
       case parseTamil word of
@@ -559,7 +559,7 @@ lookupVerb verbList showTamil allowGuess word =
         Right tamil ->
           case HashMap.lookup tamil $ byRoot verbList of
             Just verbs ->
-              Right $ map (\verb -> (intercalate ", " $ map show $ verbDefinitions verb, verb)) verbs
+              Right $ map (\verb -> (getReturnedDefinitions verb, verb)) verbs
             Nothing ->
               case validateTamil tamil of
                 Left err ->
@@ -632,32 +632,18 @@ processRequest verbList verb conjugation = do
     case lookupVerb verbList showTamil (crGuess request) word of
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
-      Right [(_, verb)] ->
+      Right [(_, verb)] | not $ headerRequired word verb ->
         forM_ (getConjugations request verb) \conjugation ->
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
-        let
-          sortedVerbs =
-            sortOn (\(_, v) -> v) verbs
-          conjugations =
-            map withConjugation sortedVerbs
-          withConjugation (header, verb) =
-            (header, verb, getConjugations request verb)
-          allSingle =
-            all isSingle conjugations
-          isSingle = \case
-            (_, _, _:_:_) -> False
-            _ -> True
-        in
-          forM_ conjugations \(header, verb, conjugations) ->
-            case conjugations of
-              [] -> return ()
-              [conjugation] | allSingle ->
-                putStrLn $ header ++ ": " ++ showChoices (conjugate conjugation verb)
-              _ -> do
-                putStrLn $ header ++ ":"
-                forM_ conjugations \conjugation ->
-                  putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
+        let sortedVerbs = sortOn (\(_, v) -> v) verbs in
+        forM_ sortedVerbs \(header, verb) ->
+          case getConjugations request verb of
+            [] -> return ()
+            conjugations -> do
+              putStrLn $ header ++ ":"
+              forM_ conjugations \conjugation ->
+                putStrLn $ "  " ++ showChoices (conjugate conjugation verb)
 
 -- | A set of known irregular verb conjugations that can be used when guessing
 irregularVerbs :: VerbList

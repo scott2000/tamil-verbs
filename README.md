@@ -1,6 +1,6 @@
 # tamil-verbs
 
-Conjugate tamil verbs in various forms for different subjects
+Conjugate Tamil verbs in various forms for different subjects
 
 ## Examples
 
@@ -15,18 +15,20 @@ Conjugate tamil verbs in various forms for different subjects
 ```
 
 ```
-> go negative respectful command
-செல் (sel): செல்லாதீர்கள் (sellaadheergaL)
-போ (pO): போகாதீர்கள் (pOgaadheergaL)
-```
-
-```
 > sollu
 சொன்னேன் (sonnEn)
 சொல்கிறேன் (solgiREn)
 சொல்வேன் (solvEn)
 சொல்லி (solli)
 சொல்ல (solla)
+```
+
+```
+> go negative respectful command
+செல் (sel):
+  செல்லாதீர்கள் (sellaadheergaL)
+போ (pO) - go, leave:
+  போகாதீர்கள் (pOgaadheergaL)
 ```
 
 ```
@@ -112,6 +114,8 @@ CLASS [PREFIX] VERB. DEFINITION, ...
 There are also some special flags for irregular verbs which can be added after
 all definitions. These are separated by periods (`.`) like the other sections.
 
+- `note` sets a note to be displayed whenever the verb is looked up by its
+  definition
 - `defect` makes the verb "defective" in that it will default to only
   conjugating for `adhu` in the future unless another subject or tense is
   explicitly requested (e.g. for `teri` since `teriyum` should be the default)
