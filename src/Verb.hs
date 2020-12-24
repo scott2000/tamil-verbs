@@ -262,12 +262,12 @@ parseVerb s =
 -- | Parse a verb list file's contents and return a list of errors and a 'VerbList'
 parseAllVerbs :: String -> ([String], VerbList)
 parseAllVerbs file =
-  go (lines file) (1 :: Int) [] []
+  go (lines file) (1 :: Int) [] emptyVerbList
   where
     go lines n errs verbs =
       case lines of
         [] ->
-          (reverse errs, makeVerbList verbs)
+          (reverse errs, verbs)
         line:rest ->
           let n' = n + 1 in
           case line of
@@ -278,7 +278,7 @@ parseAllVerbs file =
             _ ->
               case parseVerb line of
                 Right verb ->
-                  go rest n' errs (verb:verbs)
+                  go rest n' errs (addVerb verb verbs)
                 Left e ->
                   let err = "syntax error in line " ++ show n ++ ": " ++ e in
                   go rest n' (err:errs) verbs
@@ -456,9 +456,9 @@ data VerbList = VerbList
   { -- | All verbs sorted in order
     allVerbs :: Set Verb
     -- | Verbs indexed by the verb root
-  , byRoot :: !(HashMap TamilString [Verb])
+  , byRoot :: !(HashMap TamilString (Set Verb))
     -- | Verbs indexed by the verb definition
-  , byDefinition :: !(HashMap String [Verb]) }
+  , byDefinition :: !(HashMap String (Set Verb)) }
 
 -- | An empty 'VerbList' with no verbs
 emptyVerbList :: VerbList
@@ -474,11 +474,14 @@ addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
   | otherwise = VerbList
     { allVerbs = Set.insert v allVerbs
     , byRoot = withAllNames
-    , byDefinition = foldr insertVerb byDefinition $ map vDefinition $ verbDefinitions v }
+    , byDefinition = foldr insertVerb byDefinition definitions }
   where
     v = basicVerb
       { verbRoot = convertInitialN $ verbRoot basicVerb
       , verbPrefix = convertInitialN $ verbPrefix basicVerb }
+
+    definitions =
+      map vDefinition (verbDefinitions v)
 
     withAllNames =
       foldr insertVerb byRoot $ allChoices allNames
@@ -491,10 +494,10 @@ addVerb basicVerb verbList@VerbList { allVerbs, byRoot, byDefinition }
         Just stem ->
           stem
 
-    insertVerb :: (Eq k, Hashable k) => k -> HashMap k [Verb] -> HashMap k [Verb]
+    insertVerb :: (Eq k, Hashable k) => k -> HashMap k (Set Verb) -> HashMap k (Set Verb)
     insertVerb = HashMap.alter \case
-      Nothing -> Just [v]
-      Just vs -> Just $ v : vs
+      Nothing -> Just $ Set.singleton v
+      Just vs -> Just $ Set.insert v vs
 
 -- | Make a 'VerbList' from a list of verbs
 makeVerbList :: [Verb] -> VerbList

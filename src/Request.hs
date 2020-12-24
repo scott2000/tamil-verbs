@@ -12,6 +12,7 @@ import Data.Char
 
 import System.IO
 
+import qualified Data.Set as Set
 import qualified Data.HashMap.Strict as HashMap
 
 -- | A type of conjugation that can be requested
@@ -517,7 +518,7 @@ guess allowNoInfoGuess verbList basicRoot =
               ( show (verbClass v)
               , v { verbPrefix = rootPrefix `append` verbPrefix v } )
           in
-            map updateVerb verbs
+            map updateVerb $ Set.toList verbs
 
 -- | Checks if a 'TamilString' looks like a normal Tamil verb
 looksLikeVerb :: TamilString -> Bool
@@ -547,7 +548,7 @@ lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either St
 lookupVerb verbList showTamil allowGuess word =
   case HashMap.lookup (map toLower word) $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (getReturnedRoot showTamil verb, verb)) verbs
+      Right $ map (\verb -> (getReturnedRoot showTamil verb, verb)) $ Set.toList verbs
     Nothing ->
       let notDefinition = Left "cannot find word with that definition" in
       case parseTamil word of
@@ -561,7 +562,7 @@ lookupVerb verbList showTamil allowGuess word =
         Right tamil ->
           case HashMap.lookup tamil $ byRoot verbList of
             Just verbs ->
-              Right $ map (\verb -> (getReturnedDefinitions verb, verb)) verbs
+              Right $ map (\verb -> (getReturnedDefinitions verb, verb)) $ Set.toList verbs
             Nothing ->
               case validateTamil tamil of
                 Left err ->
@@ -638,8 +639,7 @@ processRequest verbList verb conjugation = do
         forM_ (getConjugations request verb) \conjugation ->
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->
-        let sortedVerbs = sortOn (\(_, v) -> v) verbs in
-        forM_ sortedVerbs \(header, verb) ->
+        forM_ verbs \(header, verb) ->
           case getConjugations request verb of
             [] -> return ()
             conjugations -> do

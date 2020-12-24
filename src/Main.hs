@@ -50,7 +50,7 @@ main = do
       hFlush stdout
       words <$> getLine >>= \case
         [] -> return ()
-        (":parse":words) -> do
+        ":parse":words -> do
           let
             isWordChar c = isAlpha c || isMark c || c == '~'
             skipSpecial [] = ("", "", "")
@@ -82,7 +82,7 @@ main = do
               putStrLn t
               putStrLn l
           startInteractive verbList
-        (":guess":words) -> do
+        ":guess":words -> do
           case mapM parseAndValidateTamil words of
             Left err ->
               putStrLn $ "error: " ++ err
@@ -90,17 +90,17 @@ main = do
               let word = foldl' suffix (TamilString []) words in
               mapM_ (print . snd) $ guess True verbList word
           startInteractive verbList
-        (":export":pathParts) -> do
+        ":export":pathParts -> do
           let path = unwords pathParts
           exportVerbList path verbList
           putStrLn $ "exported " ++ count verbList ++ " verbs to '" ++ path ++ "'"
           startInteractive verbList
-        (":load":pathParts) -> do
+        ":load":pathParts -> do
           let path = unwords pathParts
           verbList <- loadVerbList path
           putStrLn $ "loaded '" ++ path ++ "' (" ++ count verbList ++ " verbs)"
           startInteractive verbList
-        (":add":verbParts) ->
+        ":add":verbParts ->
           case parseVerb (unwords verbParts) of
             Left err -> do
               putStrLn $ "syntax error: " ++ err
@@ -109,24 +109,30 @@ main = do
               let verbList' = addVerb verb verbList
               putStrLn $ "verb added (" ++ count verbList' ++ " verbs)"
               startInteractive verbList'
-        (":list":"def":_) -> do
+        ":list":"def":rest -> do
+          let
+            min =
+              case rest of
+                "dup" : _ -> 1
+                _         -> 0
           -- List by definition instead of just giving the verb list
           forM_ (sort $ HashMap.toList $ byDefinition verbList) \(def, verbs) ->
-            putStrLn $
-              "[" ++ show (length verbs) ++ "] "
-              ++ def ++ ": "
-              ++ intercalate ", " (map getFormattedRoot $ sort verbs)
+            when (length verbs > min) $
+              putStrLn $
+                "[" ++ show (length verbs) ++ "] "
+                ++ def ++ ": "
+                ++ intercalate ", " (map getFormattedRoot $ Set.toList verbs)
           startInteractive verbList
-        (":list":_) -> do
+        ":list":_ -> do
           mapM_ print $ Set.toAscList $ allVerbs verbList
           startInteractive verbList
-        (":clear":_) -> do
+        ":clear":_ -> do
           putStrLn "cleared all loaded verbs"
           startInteractive emptyVerbList
-        (":reset":_) -> do
+        ":reset":_ -> do
           putStrLn $ "reset to default verb list (" ++ count defaultVerbList ++ " verbs)"
           startInteractive defaultVerbList
-        (":help":_) -> do
+        ":help":_ -> do
           putStrLn ":parse <word>   parse the Tamil word and convert it to both alphabets"
           putStrLn ":guess <word>   guess an appropriate verb entry for this word"
           putStrLn ":export <file>  export the currently loaded verbs to a file"
@@ -138,14 +144,14 @@ main = do
           putStrLn ":help           print this message"
           putStrLn ":quit           quit the program"
           startInteractive verbList
-        (":quit":_) -> return ()
-        (":q":_) -> return ()
-        (":":_) ->
+        ":quit":_ -> return ()
+        ":q":_ -> return ()
+        ":":_ ->
           startInteractive verbList
-        ((':':command):_) -> do
+        (':':command):_ -> do
           putStrLn $ "unknown command :" ++ command
           startInteractive verbList
-        (verb:conjugation) -> do
+        verb:conjugation -> do
           processRequest verbList verb $ unwords conjugation
           startInteractive verbList
 
