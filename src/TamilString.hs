@@ -709,6 +709,8 @@ toLatin (TamilString str) =
           's' : acc
         [Consonant (Hard h)] ->
           unvoiced h : acc
+        Consonant (Hard h) : rest@(Consonant (Grantha _) : _) ->
+          go' rest [unvoiced h]
         Consonant (Hard h) : rest ->
           go' rest $ voiced h
         [Consonant (Soft NDental)] ->
