@@ -100,12 +100,14 @@ getConjugations cr verb =
       parsePositive
   where
     defective = verbDefective verb
+    inanimate = verbInanimate verb
     subject =
       case crSubject cr of
         Just subject ->
           subject
         Nothing
           | defective -> Third $ Irrational Adhu
+          | inanimate -> Third $ Irrational Adhu
           | otherwise -> Naan
     thirdSubject =
       case crSubject cr of
@@ -516,7 +518,8 @@ guess allowNoInfoGuess verbList basicRoot =
           let
             updateVerb v =
               ( show $ verbClass v
-              , v { verbPrefix = rootPrefix `append` verbPrefix v } )
+              , v { verbPrefix = rootPrefix `append` verbPrefix v
+                  , verbNote = "" } )
           in
             map updateVerb $ Set.toList verbs
 

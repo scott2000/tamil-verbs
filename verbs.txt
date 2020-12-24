@@ -2,8 +2,8 @@
 1W saa. die. adv settu. adhu saagum; saam
 1W saappiDu. eat
 1W kooppiDu. call
-1W peRu. receive, obtain
 1W paDu. experience, undergo, suffer
+1W peRu. receive, obtain
 1W pODu. drop, put, place
 1W viDu. let go, release
 1W azhu. cry
@@ -15,6 +15,7 @@
 1S vil. sell, be sold
 1S kEL. ask, listen, hear
 1S izhu. pull
+1S uDai. break (transitive)
 1S eDu. take, get
 1S kaDi. bite
 1S kuDi. drink
@@ -22,30 +23,31 @@
 1S kuLi. bathe, shower, take a bath, take a shower
 1S koDu. give
 1S kiDai. be available, be received, be obtained
-1S paDi. study, read
 1S paDu. lie down, go to bed
-1S piDi. hold, catch, be liked
+1S paDi. study, read
 1S paar. look, see
-1S vai. set down, put, place
+1S piDi. hold, catch, be liked
 1S muDi. finish, complete
-1S uDai. break
+1S vai. set down, put, place
 
 # Class 2 Weak
-2W thaa. give. adv thandhu. stem tharu. resp thaarungaL
-2W vaa. come. adv vandhu. stem varu. resp vaarungaL
-2W pOdhu. be enough. defect. adv pOndhu, pOrndhu
-2W en. say. note can only be used when quoting. inf ena; enna
 2W kaaN. see. adv kaNDu
+2W thaa. give. adv thandhu. stem tharu. resp thaarungaL
+2W pOdhu. be enough. defect. adv pOndhu, pOrndhu
+2W vaa. come. adv vandhu. stem varu. resp vaarungaL
+2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
 2W aRi. know, understand
+2W en. say. note can only be used when quoting. inf ena; enna
+2W uDai. break (intransitive), be broken. inanim
+2W uTkaar. sit
 2W ezhu. get up, wake up
 2W koL. have, hold
+2W purindhu koL. understand
 2W kol. kill
 2W sel. go
-2W muDi. be finished, be completed. defect
-2W uDai. be broken. defect
-2W teri. be known, be visible, be apparent. defect
-2W puri. be understood. defect
-2W uTkaar. sit
+2W teri. be known, be visible, be apparent. inanim
+2W puri. be understood. inanim
+2W muDi. be finished, be completed. inanim
 
 # Class 2 Strong
 2S nil. stop, stand
@@ -57,18 +59,23 @@
 
 # Classs 3
 3 aa. become, happen, be done
-3 paNNu. do, make
+3 aakku. make, cause, effect
 3 pO. go, leave
+3 pOkku. cause to go
 3 sol. say, tell
-3 anuppu. send
+3 aaDu. dance
 3 ODu. run
-3 OTTu. drive
+3 OTTu. cause to run, drive, conduct
+3 paNNu. do, make
+3 anuppu. send
 3 kazhuvu. wash
 3 thaLLu. push
 3 thoongu. sleep
 3 tiruDu. steal
-3 tirumbu. turn around, turn, return
+3 tiruppu. turn (transitive)
+3 tirumbu. turn (intransitive), return
 3 nambu. believe, trust, hope
+3 paDuttu. cause, effect, make lie down
 3 paaDu. sing
 3 pEsu. speak, talk
 3 mooDu. close, shut, cover, hide
@@ -76,7 +83,3 @@
 3 veTTu. cut
 3 vaangu. buy
 3 vENDu. request, be wanted
-
-# Compound verbs
-2W koNDu vaa. bring. adv vandhu. stem varu. resp vaarungaL
-2W purindhu koL. understand

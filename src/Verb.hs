@@ -207,7 +207,12 @@ parseVerb s =
       return defaultVerb { verbClass, verbPrefix, verbRoot }
     addFlag verb ["defect"]
       | verbDefective verb = Left "verb already marked defective"
+      | verbInanimate verb = Left "defective implies inanimate"
       | otherwise          = Right verb { verbDefective = True }
+    addFlag verb ["inanim"]
+      | verbDefective verb = Left "defective implies inanimate"
+      | verbInanimate verb = Left "verb already marked inanimate"
+      | otherwise          = Right verb { verbInanimate = True }
     addFlag _ [flag] =
       Left $ "invalid flag for verb: " ++ flag
     addFlag verb ("note" : rest) =
@@ -300,6 +305,9 @@ instance Show VerbDefinition where
       note ->
         def ++ " (" ++ note ++ ")"
 
+(~#) :: String -> String -> VerbDefinition
+(~#) = VerbDefinition
+
 -- | Represents a verb that can be conjugated
 data Verb = Verb
   { -- | The class of the verb
@@ -312,8 +320,10 @@ data Verb = Verb
   , verbDefinitions :: [VerbDefinition]
     -- | A note associated with a verb
   , verbNote :: String
-    -- | 'True' if the verb should be conjugated in the future adhu primarily
+    -- | 'True' if the verb should be conjugated in the future primarily
   , verbDefective :: Bool
+    -- | 'True' if the verb should be conjugated with adhu primarily (implied by defective)
+  , verbInanimate :: Bool
     -- | An irregular adverb/past (only for classes 1 and 2)
   , verbAdverb :: Maybe ChoiceString
     -- | An irregular stem for present and future tense
@@ -353,6 +363,7 @@ instance Show Verb where
       flags =
         addNote "note" verbNote $
         addFlag "defect" verbDefective $
+        addFlag "inanim" verbInanimate $
         addKey "adv" verbAdverb $
         addKey "stem" verbStem $
         addKey "adhu" verbFutureAdhu $
@@ -369,6 +380,7 @@ defaultVerb = Verb
   , verbDefinitions = []
   , verbNote = ""
   , verbDefective = False
+  , verbInanimate = False
   , verbAdverb = Nothing
   , verbStem = Nothing
   , verbFutureAdhu = Nothing
@@ -453,7 +465,7 @@ getStrength verb =
 
 -- | A list of 'Verb's sorted in various ways to make searching faster
 data VerbList = VerbList
-  { -- | All verbs sorted in order
+  { -- | All verbs in the verb list (not including children)
     allVerbs :: Set Verb
     -- | Verbs indexed by the verb root
   , byRoot :: !(HashMap TamilString (Set Verb))
@@ -555,7 +567,7 @@ defaultVerbList = makeVerbList $ concat
           , verbDefinitions = ["finish", "complete"] }
       , defaultVerb
           { verbRoot = "uDai"
-          , verbDefinitions = ["break"] } ]
+          , verbDefinitions = ["break" ~# "transitive"]} ]
 
     -- Class 2 Weak
   , setClass (Class2 Weak)
@@ -583,19 +595,19 @@ defaultVerbList = makeVerbList $ concat
       , defaultVerb
           { verbRoot = "muDi"
           , verbDefinitions = ["be finished", "be completed"]
-          , verbDefective = True }
+          , verbInanimate = True }
       , defaultVerb
           { verbRoot = "uDai"
-          , verbDefinitions = ["be broken"]
-          , verbDefective = True }
+          , verbDefinitions = ["break" ~# "intransitive", "be broken"]
+          , verbInanimate = True }
       , defaultVerb
           { verbRoot = "teri"
           , verbDefinitions = ["be known", "be visible", "be apparent"]
-          , verbDefective = True }
+          , verbInanimate = True }
       , defaultVerb
           { verbRoot = "puri"
           , verbDefinitions = ["be understood"]
-          , verbDefective = True }
+          , verbInanimate = True }
       , defaultVerb
           { verbRoot = "uTkaar"
           , verbDefinitions = ["sit"] } ]
@@ -637,7 +649,7 @@ defaultVerbList = makeVerbList $ concat
           , verbDefinitions = ["sleep"] }
       , defaultVerb
           { verbRoot = "tirumbu"
-          , verbDefinitions = ["turn around", "turn", "return"] }
+          , verbDefinitions = ["turn", "return"] }
       , defaultVerb
           { verbRoot = "paaDu"
           , verbDefinitions = ["sing"] }

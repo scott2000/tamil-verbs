@@ -78,7 +78,11 @@ or Tamil letters. Arguments can also be separated by hyphens or commas.
 
 ```
 > be-known
+தெரிந்தது (terindhadhu)
+தெரிகிறது (terigiRadhu)
 தெரியும் (teriyum)
+தெரிந்து (terindhu)
+தெரிய (teriya)
 ```
 
 ```
@@ -118,7 +122,9 @@ all definitions. These are separated by periods (`.`) like the other sections.
   definition
 - `defect` makes the verb "defective" in that it will default to only
   conjugating for `adhu` in the future unless another subject or tense is
-  explicitly requested (e.g. for `teri` since `teriyum` should be the default)
+  explicitly requested (e.g. for `pOdhu` since the only common form is `pOdhum`)
+- `inanim` makes the verb default to conjugating for `adhu` instead of `naan`
+  when no subject is explicitly given (e.g. for `teri` and `puri`)
 - `adv V` makes `V` be the adverb form of the verb (e.g. `vandhu` for `vaa`)
 - `stem S` makes `S` be the stem for present and future tense of the verb
   (e.g. `varu` for `vaa`)
