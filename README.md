@@ -44,15 +44,15 @@ Conjugate Tamil verbs in various forms for different subjects
 ```
 
 ```
-> koNDuvaa guess habitual negative
-கொண்டுவருவதில்லை (koNDuvaruvadhillai)
+> koNDuvaa guess conditional
+கொண்டுவந்தால் (koNDuvandhaal)
 ```
 
 ## Valid conjugation arguments
 
 - `past`: past tense
 - `present`: present tense
-- `future`/`habitual`: future tense
+- `future`: future tense
 - `infinitive`: infinitive
 - `adverb`: adverb or AvP
 - `adjective`: verbal adjective

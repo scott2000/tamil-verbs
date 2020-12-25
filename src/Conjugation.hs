@@ -559,7 +559,6 @@ conjugatePositive conjugation verb =
 data NegativeConjugation
   = NegativePastPresent                 -- ^ (e.g. @seyyavillai@)
   | NegativeFuture Subject              -- ^ (e.g. @seyyamaaTTEn@)
-  | NegativeHabitual                    -- ^ (e.g. @seyvadhillai@)
   | NegativeClassical Subject           -- ^ (e.g. @seyyEn@)
   | NegativeAdjective                   -- ^ (e.g. @seyyaadha@)
   | NegativeRelative ThirdPersonSubject -- ^ (e.g. @seyyaadhavar@)
@@ -591,8 +590,6 @@ conjugateNegative conjugation verb =
       getNegativeFutureIrrational irrational verb
     NegativeFuture subject ->
       getInfinitive verb |+| conjugateNegative (NegativeClassical subject) maaTTu
-    NegativeHabitual ->
-      getNounAdhu verb |+ "illai"
     NegativeClassical (Third (Irrational irrational)) ->
       getNegativeFutureIrrational irrational verb
     NegativeClassical subject ->

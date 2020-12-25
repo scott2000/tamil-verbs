@@ -41,7 +41,6 @@ data TenseRequest
   = TRPast
   | TRPresent
   | TRFuture
-  | TRHabitual
   | TRClassical
   deriving Eq
 
@@ -50,7 +49,6 @@ instance Show TenseRequest where
     TRPast      -> "past"
     TRPresent   -> "present"
     TRFuture    -> "future"
-    TRHabitual  -> "habitual"
     TRClassical -> "classical"
 
 -- | An alphabet that can be used to print the result
@@ -133,8 +131,6 @@ getConjugations cr verb =
           case crTense cr of
             Just TRFuture ->
               [Negative $ NegativeFuture subject]
-            Just TRHabitual ->
-              [Negative NegativeHabitual]
             Just TRClassical ->
               [Negative $ NegativeClassical subject]
             _ ->
@@ -259,8 +255,6 @@ parseConjugationRequest parts = do
           updateTense TRPresent
         "future" ->
           updateTense TRFuture
-        "habitual" ->
-          updateTense TRHabitual
         "classical" ->
           updateTense TRClassical
         "classic" ->
@@ -305,8 +299,6 @@ parseConjugationRequest parts = do
           updateTense TRPresent
         "fut" ->
           updateTense TRFuture
-        "hab" ->
-          updateTense TRHabitual
         "class" ->
           updateTense TRClassical
         "old" ->
