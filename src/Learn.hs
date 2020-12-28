@@ -6,14 +6,13 @@ import Verb
 import Conjugation
 import Interactive
 
-import Control.Monad
-
 import System.IO
 import System.Exit
 import System.Random.MWC
 import System.Random.Stateful hiding (split)
 
 import Data.List
+import Data.Monoid
 
 import qualified Data.Set as Set
 import Data.Map.Strict (Map)
@@ -375,15 +374,15 @@ matchingDefinition verbList definition note =
       verbNote verb == note && definition `elem` verbDefinitions verb
 
 -- | Generate questions to ask based on the settings, and pass them to a provided function
-generateQuestions :: LearnSettings -> Config -> (Int -> String -> [ChoiceString] -> IO ()) -> IO ()
+generateQuestions :: Monoid a => LearnSettings -> Config -> (Int -> String -> [ChoiceString] -> IO a) -> IO a
 generateQuestions LearnSettings { .. } config f = do
   g <- createSystemRandom
-  go g 1 Set.empty
+  go g 1 mempty Set.empty
   where
-    go g n verbs
-      | n > learnCount = return ()
+    go g n correct verbs
+      | n > learnCount = return correct
       | Set.null verbs =
-        go g n $ allVerbs learnVerbList
+        go g n correct $ allVerbs learnVerbList
       | otherwise = do
         -- Pick a random verb
         k <- upTo g $ Set.size verbs
@@ -394,7 +393,7 @@ generateQuestions LearnSettings { .. } config f = do
         pickDefinition g (verbDefinitions verb) >>= \case
           Nothing ->
             -- If there is no definition, skip the verb
-            go g n verbs'
+            go g n correct verbs'
           Just definition -> do
             -- Pick a random conjugation that fits the verb
             conjugation <- randomConjugation config verb definition g
@@ -436,8 +435,8 @@ generateQuestions LearnSettings { .. } config f = do
               -- Find the answers that could match the question
               answers =
                 map (conjugate conjugation) matchingVerbs'
-            f n question answers
-            go g (n + 1) verbs'
+            score <- f n question answers
+            go g (n + 1) (correct <> score) verbs'
 
 -- | Represents how correct an answer is
 data AnswerScore
@@ -492,21 +491,24 @@ getTamil = do
           return tamil
 
 -- | Prompts the user for an answer and then provides feedback based on how correct it was
-checkAnswer :: Bool -> (TamilLetter -> TamilLetter -> Bool) -> (TamilString -> String) -> [ChoiceString] -> IO ()
+checkAnswer :: Bool -> (TamilLetter -> TamilLetter -> Bool) -> (TamilString -> String) -> [ChoiceString] -> IO Bool
 checkAnswer mayRetry check showTamil answers = do
   tamil <- getTamil
   let showChoices = showUsing showTamil
   case scoreAll check tamil answers of
-    Correct ->
+    Correct -> do
       putStrLn $ "Correct!"
-    CorrectButUncommon (ChoiceString [moreCommon] _) ->
+      return True
+    CorrectButUncommon (ChoiceString [moreCommon] _) -> do
       putStrLn $ "Correct! But " ++ showTamil moreCommon ++ " is more common."
-    CorrectButUncommon moreCommon ->
+      return True
+    CorrectButUncommon moreCommon -> do
       putStrLn $ "Correct! But these are more common: " ++ showChoices moreCommon
+      return True
     IncorrectButClose | mayRetry -> do
       putStrLn "That's close but not quite right. Try again."
       checkAnswer False check showTamil answers
-    _ ->
+    _ -> do
       let
         header =
           case tamil of
@@ -521,8 +523,8 @@ checkAnswer mayRetry check showTamil answers = do
             answers ->
               "There are multiple verbs that would be correct:" ++
                 concatMap (\answer -> "\n" ++ showChoices answer) answers
-      in
-        putStrLn $ header ++ msg
+      putStrLn $ header ++ msg
+      return False
 
 -- | Generate questions about verb conjugations using the provided settings
 startLearn :: LearnSettings -> String -> IO ()
@@ -540,10 +542,17 @@ startLearn settings config = do
       intercalate "; " $ map (showUsing showTamil) $ map hide answers
   case learnOutput settings of
     Nothing -> do
-      generateQuestions settings config \n q a -> do
-        when (n /= 1) $ putStrLn ""
-        putStrLn $ show n ++ ". " ++ q
-        checkAnswer (not $ learnStrict settings) (learnCheck settings) showTamil a
+      correct <-
+        getSum <$> generateQuestions settings config \n q a -> do
+          putStrLn $ show n ++ ". " ++ q
+          correct <- checkAnswer (not $ learnStrict settings) (learnCheck settings) showTamil a
+          putStrLn ""
+          return $ Sum if correct then 1 else 0
+      let
+        total = learnCount settings
+        -- Find the percentage rounded to the nearest whole number using integer division tricks
+        percent = ((correct * 100) + (total `quot` 2)) `quot` total
+      putStrLn $ "Score: " ++ show correct ++ "/" ++ show total ++ " (" ++ show percent ++ "%)"
     Just (hq, ha) -> do
       generateQuestions settings config \n q a -> do
         hPutStrLn hq $ show n ++ ". " ++ q

@@ -495,7 +495,7 @@ conjugateFinite tense subject verb =
     (Future, _, Third (Irrational Adhu)) ->
       getFutureAdhu verb
     (Future, _, Third (Irrational Avai)) ->
-      getFuture verb |+ "ana" <> getFutureAdhu verb
+      getFutureAdhu verb <> getFuture verb |+ "ana"
     (Future, _, _) ->
       commonSuffix subject $ getFuture verb
 
