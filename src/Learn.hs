@@ -117,10 +117,8 @@ randomConjugation Config { .. } verb definition g =
     _ -> fail "invalid kind"
   where
     defective = verbDefective verb
-    inanimate
-      | verbInanimate verb = True
-      | 'b' : 'e' : ' ' : _ <- vDefinition definition = True
-      | otherwise = False
+    inanimate =
+      verbInanimate verb || vDefinitionInanimate definition
     kind
       | defective = cKindDefective
       | otherwise = cKind

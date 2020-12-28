@@ -12,7 +12,7 @@
 
 # Class 1 Strong
 1S kal. learn
-1S vil. sell, be sold
+1S vil. sell, be sold*
 1S kEL. ask, listen, hear
 1S izhu. pull
 1S uDai. break (transitive)
@@ -22,11 +22,11 @@
 1S kudhi. jump
 1S kuLi. bathe, shower, take a bath, take a shower
 1S koDu. give
-1S kiDai. be available, be received, be obtained
+1S kiDai. be available, be received, be obtained. inanim
 1S paDu. lie down, go to bed
 1S paDi. study, read
 1S paar. look, see
-1S piDi. hold, catch, be liked
+1S piDi. hold, catch, be liked*
 1S muDi. finish, complete
 1S vai. put, place, set down
 
@@ -52,13 +52,13 @@
 # Class 2 Strong
 2S nil. stop, stand
 2S tiRa. open, unlock, reveal
-2S naDa. walk, happen
+2S naDa. walk, happen*
 2S paRa. fly
 2S maRa. forget
 2S iru. be, stay
 
 # Classs 3
-3 aa. become
+3 aa. become, be completed*
 3 aakku. make, cause to be
 3 pO. go, leave
 3 pOkku. cause to go

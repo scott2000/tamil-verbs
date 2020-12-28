@@ -542,12 +542,22 @@ looksLikeVerb (TamilString str) =
         _       -> False
     _ -> False
 
+-- | Sets a verb to be considered inanimate if the matching definition is as well
+checkInanim :: String -> Verb -> Verb
+checkInanim def verb
+  | any isMatchingInanim $ verbDefinitions verb = verb { verbInanimate = True }
+  | otherwise = verb
+  where
+    isMatchingInanim VerbDefinition { vDefinition, vDefinitionInanimate } =
+      vDefinitionInanimate && def == vDefinition
+
 -- | Tries to look up a search in a 'VerbList' given a function to show Tamil words and optionally guesses if needed
 lookupVerb :: VerbList -> (TamilString -> String) -> Bool -> String -> Either String [(String, Verb)]
 lookupVerb verbList showTamil allowGuess word =
-  case HashMap.lookup (map toLower word) $ byDefinition verbList of
+  let wordLower = map toLower word in
+  case HashMap.lookup wordLower $ byDefinition verbList of
     Just verbs ->
-      Right $ map (\verb -> (getReturnedRoot showTamil verb, verb)) $ Set.toList verbs
+      Right $ map (\verb -> (getReturnedRoot showTamil verb, checkInanim wordLower verb)) $ Set.toList verbs
     Nothing ->
       let notDefinition = Left "cannot find word with that definition" in
       case parseTamil word of
@@ -631,7 +641,7 @@ processRequest verbList verb conjugation = do
     case lookupVerb verbList showTamil (crGuess request) word of
       Left err ->
         hPutStrLn stderr $ "error: " ++ err
-      Right [(_, verb)] | not $ headerRequired word verb ->
+      Right [(_, verb)] | not $ headerRequired (map toLower word) verb ->
         forM_ (getConjugations request verb) \conjugation ->
           putStrLn $ showChoices $ conjugate conjugation verb
       Right verbs ->

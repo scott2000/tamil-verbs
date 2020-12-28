@@ -105,10 +105,21 @@ CLASS [PREFIX] VERB. DEFINITION, ...
 - `VERB` is the verb in either Latin or Tamil letters
 - `DEFINITION` is an English definition for the verb (there may be multiple)
 
+Definitions can also end with a note in parentheses that will be displayed
+whenever that specific definition is used. This can help clarify ambiguous
+definitions such as `break (transitive)` and `break (intransitive)`. Also, if
+a particular definition can only be used with inanimate objects, then an
+asterisk can be placed at the end to indicate it. This helps avoid conjugations
+such as "I happened" or "I was completed" which would be meaningless. For
+instance, `naDa` would be defined as `walk, happen*` to indicate that the
+seconnd definition can only be used with `adhu`. In order to apply a note or
+asterisk to a whole verb instead of just definitions, see `note` and `inanim`
+below.
+
 There are also some special flags for irregular verbs which can be added after
 all definitions. These are separated by periods (`.`) like the other sections.
 
-- `note` sets a note to be displayed whenever the verb is looked up by its
+- `note` sets a note to be displayed whenever the verb is looked up by any
   definition
 - `defect` makes the verb "defective" in that it will default to only
   conjugating for `adhu` in the future unless another subject or tense is

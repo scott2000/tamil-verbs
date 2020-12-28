@@ -115,36 +115,62 @@ parseFlagChoice s =
 
 -- | Parses a 'VerbDefinition' with an optional note
 parseDefinition :: String -> Either String VerbDefinition
-parseDefinition = go
+parseDefinition = fmap trim . go
   where
+    trim (VerbDefinition def inanim note) =
+      VerbDefinition (dropSpace def) inanim (dropSpace note)
+    dropSpace = dropWhile (' ' ==)
+
     go [] =
-      Right $ VerbDefinition "" ""
+      Right $ VerbDefinition "" False ""
     go ('(':rest) =
-      (VerbDefinition "") <$> parseNote rest
+      (VerbDefinition "" False) <$> parseNote rest
     go (' ':rest) = do
       def <- go rest
-      return $
-        case def of
-          VerbDefinition def@(_:_) note ->
-            VerbDefinition (' ' : def) note
-          _ -> def
+      return case def of
+        VerbDefinition def@(_:_) inanim note ->
+          VerbDefinition (' ' : def) inanim note
+        _ -> def
+    go ('*':rest) =
+      parseStar rest
     go (ch:rest) = do
       checkChar ch
-      VerbDefinition def note <- go rest
-      return $ VerbDefinition (ch : def) note
+      VerbDefinition def inanim note <- go rest
+      return $ VerbDefinition (ch : def) inanim note
+
+    parseStar [] =
+      Right $ VerbDefinition "" True ""
+    parseStar ('(':rest) =
+      (VerbDefinition "" True) <$> parseNote rest
+    parseStar (' ':rest) =
+      parseStar rest
+    parseStar ('*':rest) = do
+      parseStar rest
+      Left "only a single asterisk may be used in a definition"
+    parseStar (ch:_) = do
+      checkChar ch
+      Left "asterisk can only appear at the end of a definition"
 
     parseNote [] =
       Left "unclosed parentheses in note for definition"
     parseNote [')'] =
       Right ""
+    parseNote [')', '*'] =
+      Left "asterisk can only appear at the end of the definition before the note"
     parseNote ('(':_) =
       Left "too many opening parentheses in note for definition"
     parseNote (')':')':_) =
       Left "too many closing parentheses in note for definition"
     parseNote (')':_) =
       Left "note must come at the end of a definition"
-    parseNote (' ':rest) =
-      (' ' :) <$> parseNote rest
+    parseNote (' ':rest) = do
+      note <- parseNote rest
+      return case note of
+        _:_ -> ' ' : note
+        _ -> note
+    parseNote ('*':rest) = do
+      parseNote rest
+      Left "asterisk can only appear at the end of a definition"
     parseNote (ch:rest) = do
       checkChar ch
       (ch :) <$> parseNote rest
@@ -292,23 +318,32 @@ parseAllVerbs file =
 data VerbDefinition = VerbDefinition
   { -- | The definition itself
     vDefinition :: !String
+    -- | Marks whether this definition may only be used with adhu
+  , vDefinitionInanimate :: !Bool
     -- | A note that goes along with the definition
   , vDefinitionNote :: !String }
   deriving Eq
 
 instance IsString VerbDefinition where
-  fromString def = VerbDefinition def ""
+  fromString def =
+    case parseDefinition def of
+      Left err ->
+        error err
+      Right res ->
+        res
 
 instance Show VerbDefinition where
-  show (VerbDefinition def note) =
-    case note of
-      "" -> def
-      note ->
-        def ++ " (" ++ note ++ ")"
-
--- | A shorthand for @VerbDefinition@
-(~#) :: String -> String -> VerbDefinition
-(~#) = VerbDefinition
+  show (VerbDefinition def inanim note) =
+    def ++ star ++ paren
+    where
+      star
+        | inanim = "*"
+        | otherwise = ""
+      paren =
+        case note of
+          "" -> ""
+          note ->
+            " (" ++ note ++ ")"
 
 -- | Represents a verb that can be conjugated
 data Verb = Verb
@@ -441,7 +476,7 @@ getReturnedRoot showTamil verb =
 -- | Formats the definitions of a 'Verb', including any notes
 getReturnedDefinitions :: Verb -> String
 getReturnedDefinitions Verb { verbDefinitions, verbNote } =
-  intercalate ", " (map show verbDefinitions) ++
+  intercalate ", " (map (\def -> show def { vDefinitionInanimate = False }) verbDefinitions) ++
     case verbNote of
       "" -> ""
       note -> " [" ++ note ++ "]"
@@ -573,7 +608,7 @@ defaultVerbList = makeVerbList $ concat
           , verbDefinitions = ["finish", "complete"] }
       , defaultVerb
           { verbRoot = "uDai"
-          , verbDefinitions = ["break" ~# "transitive"]} ]
+          , verbDefinitions = ["break (transitive)"]} ]
 
     -- Class 2 Weak
   , setClass (Class2 Weak)
@@ -604,7 +639,7 @@ defaultVerbList = makeVerbList $ concat
           , verbInanimate = True }
       , defaultVerb
           { verbRoot = "uDai"
-          , verbDefinitions = ["break" ~# "intransitive", "be broken"]
+          , verbDefinitions = ["break (intransitive)", "be broken"]
           , verbInanimate = True }
       , defaultVerb
           { verbRoot = "teri"
@@ -625,7 +660,7 @@ defaultVerbList = makeVerbList $ concat
           , verbDefinitions = ["stop", "stand"] }
       , defaultVerb
           { verbRoot = "naDa"
-          , verbDefinitions = ["walk", "happen"] }
+          , verbDefinitions = ["walk", "happen*"] }
       , defaultVerb
           { verbRoot = "paRa"
           , verbDefinitions = ["fly"] }
@@ -640,7 +675,7 @@ defaultVerbList = makeVerbList $ concat
   , setClass Class3
       [ defaultVerb
           { verbRoot = "aa"
-          , verbDefinitions = ["become"] }
+          , verbDefinitions = ["become", "be completed*"] }
       , defaultVerb
           { verbRoot = "pO"
           , verbDefinitions = ["go", "leave"] }
