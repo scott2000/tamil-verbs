@@ -397,9 +397,9 @@ guessNoInfo (TamilString str) =
           Vowel (A Short) : _ ->
             [basicClass $ Class2 Strong]
           Vowel (I Short) : Consonant (Medium R) : _ ->
-            [defective2W]
+            [inanimate2W]
           _ ->
-            [basicClass $ Class1 Strong, defective2W]
+            [basicClass $ Class1 Strong, inanimate2W]
       | otherwise ->
         case reducedStr of
           Vowel (U Short) : Consonant (Hard TRetroflex) : Vowel (I Short) : _ ->
@@ -477,18 +477,18 @@ guessNoInfo (TamilString str) =
       Soft NAlveolar  -> True
       _               -> False
     basicClass c =
-      ( show c
+      ( "transitive (" ++ show c ++ ")"
       , defaultVerb
         { verbClass = c
         , verbRoot = reducedRoot
         , verbPrefix = prefixRoot } )
-    defective2W =
-      ( show $ Class2 Weak
+    inanimate2W =
+      ( "intransitive (" ++ show (Class2 Weak) ++ ")"
       , defaultVerb
           { verbClass = Class2 Weak
           , verbRoot = reducedRoot
           , verbPrefix = prefixRoot
-          , verbDefective = True } )
+          , verbInanimate = True } )
 
 -- | Given some root, try to guess how to conjugate the verb, possibly making assumptions due to the form of the root
 guess :: Bool -> VerbList -> TamilString -> [(String, Verb)]
