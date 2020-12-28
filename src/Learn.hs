@@ -94,9 +94,9 @@ data Config = Config
     -- | The options for @SUBJECT@ when the conjugation is relative
   , cSubject3P :: !WeightedConfigPool }
 
--- | Pick a random conjugation from 'Config' for a given 'Verb'
-randomConjugation :: Config -> Verb -> GenIO -> IO Conjugation
-randomConjugation Config { .. } verb g =
+-- | Pick a random conjugation from 'Config' for a given 'Verb' with a definition
+randomConjugation :: Config -> Verb -> VerbDefinition -> GenIO -> IO Conjugation
+randomConjugation Config { .. } verb definition g =
   wcpDraw kind g >>= \case
     'L' -> Negative . NegativeClassical <$> subject
     'a' -> return $ Positive Adverb
@@ -118,7 +118,10 @@ randomConjugation Config { .. } verb g =
     _ -> fail "invalid kind"
   where
     defective = verbDefective verb
-    inanimate = verbInanimate verb
+    inanimate
+      | verbInanimate verb = True
+      | 'b' : 'e' : ' ' : _ <- vDefinition definition = True
+      | otherwise = False
     kind
       | defective = cKindDefective
       | otherwise = cKind
@@ -387,14 +390,14 @@ generateQuestions LearnSettings { .. } config f = do
         let
           verb = Set.elemAt k verbs
           verbs' = Set.deleteAt k verbs
-        -- Pick a random conjugation that fits the verb
-        conjugation <- randomConjugation config verb g
         -- Pick a definition for the question
         pickDefinition g (verbDefinitions verb) >>= \case
           Nothing ->
             -- If there is no definition, skip the verb
             go g n verbs'
           Just definition -> do
+            -- Pick a random conjugation that fits the verb
+            conjugation <- randomConjugation config verb definition g
             let
               -- Find verbs that match the definition
               matchingVerbs = matchingDefinition learnVerbList definition $ verbNote verb

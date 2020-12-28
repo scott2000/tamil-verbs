@@ -567,7 +567,7 @@ defaultVerbList = makeVerbList $ concat
           , verbDefinitions = ["look", "see"] }
       , defaultVerb
           { verbRoot = "vai"
-          , verbDefinitions = ["set down", "put", "place"] }
+          , verbDefinitions = ["put", "place", "set down"] }
       , defaultVerb
           { verbRoot = "muDi"
           , verbDefinitions = ["finish", "complete"] }
@@ -640,7 +640,7 @@ defaultVerbList = makeVerbList $ concat
   , setClass Class3
       [ defaultVerb
           { verbRoot = "aa"
-          , verbDefinitions = ["become", "happen", "be done"] }
+          , verbDefinitions = ["become"] }
       , defaultVerb
           { verbRoot = "pO"
           , verbDefinitions = ["go", "leave"] }

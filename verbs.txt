@@ -28,7 +28,7 @@
 1S paar. look, see
 1S piDi. hold, catch, be liked
 1S muDi. finish, complete
-1S vai. set down, put, place
+1S vai. put, place, set down
 
 # Class 2 Weak
 2W kaaN. see. adv kaNDu
@@ -58,8 +58,8 @@
 2S iru. be, stay
 
 # Classs 3
-3 aa. become, happen, be done
-3 aakku. make, cause, effect
+3 aa. become
+3 aakku. make, cause to be
 3 pO. go, leave
 3 pOkku. cause to go
 3 sol. say, tell
@@ -75,7 +75,7 @@
 3 tiruppu. turn (transitive)
 3 tirumbu. turn (intransitive), return
 3 nambu. believe, trust, hope
-3 paDuttu. cause, effect, make lie down
+3 paDuttu. cause, make lie down
 3 paaDu. sing
 3 pEsu. speak, talk
 3 mooDu. close, shut, cover, hide
