@@ -187,7 +187,7 @@ parseVerb s =
           ["???"] ->
             Right verb
           definitions -> do
-            verbDefinitions <- mapM parseDefinition definitions
+            verbDefinitions <- nub <$> mapM parseDefinition definitions
             return verb { verbDefinitions }
       foldM addFlag verb $ map words flags
     _ ->
@@ -291,9 +291,10 @@ parseAllVerbs file =
 -- | Represents a definition of a verb
 data VerbDefinition = VerbDefinition
   { -- | The definition itself
-    vDefinition :: String
+    vDefinition :: !String
     -- | A note that goes along with the definition
-  , vDefinitionNote :: String }
+  , vDefinitionNote :: !String }
+  deriving Eq
 
 instance IsString VerbDefinition where
   fromString def = VerbDefinition def ""
@@ -305,6 +306,7 @@ instance Show VerbDefinition where
       note ->
         def ++ " (" ++ note ++ ")"
 
+-- | A shorthand for @VerbDefinition@
 (~#) :: String -> String -> VerbDefinition
 (~#) = VerbDefinition
 
@@ -339,6 +341,7 @@ instance Eq Verb where
   a == b =
     verbClass a == verbClass b
     && verbRoot a == verbRoot b
+    && verbPrefix a == verbPrefix b
 
 instance Ord Verb where
   a `compare` b =
@@ -407,6 +410,11 @@ getFormattedRoot Verb { .. } =
               root ->
                 root
 
+-- | Gets the root of the 'Verb' with any prefix attached as well
+getFullVerb :: Verb -> TamilString
+getFullVerb verb =
+  suffix (verbPrefix verb) (verbRoot verb)
+
 -- | Checks if a header with definitions is required for a 'Verb' given a user's requested word
 headerRequired :: String -> Verb -> Bool
 headerRequired requested Verb { verbDefinitions, verbNote } =
@@ -422,15 +430,13 @@ headerRequired requested Verb { verbDefinitions, verbNote } =
 -- | Formats the 'Verb' root to be displayed to the user, including any notes if necessary
 getReturnedRoot :: (TamilString -> String) -> Verb -> String
 getReturnedRoot showTamil verb =
-  formatted ++
+  showTamil (getFullVerb verb) ++
     case verb of
       Verb { verbDefinitions = [VerbDefinition { vDefinitionNote = "" }], verbNote = "" } ->
         -- Since there is a single definition with no notes, it is unnecessary to print the definitions
         ""
       _ ->
         " - " ++ getReturnedDefinitions verb
-  where
-    formatted = showTamil $ suffix (verbPrefix verb) (verbRoot verb)
 
 -- | Formats the definitions of a 'Verb', including any notes
 getReturnedDefinitions :: Verb -> String
@@ -466,7 +472,7 @@ getStrength verb =
 -- | A list of 'Verb's sorted in various ways to make searching faster
 data VerbList = VerbList
   { -- | All verbs in the verb list (not including children)
-    allVerbs :: Set Verb
+    allVerbs :: !(Set Verb)
     -- | Verbs indexed by the verb root
   , byRoot :: !(HashMap TamilString (Set Verb))
     -- | Verbs indexed by the verb definition

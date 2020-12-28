@@ -28,8 +28,8 @@ data IrrationalSubject
 
 instance TamilShow IrrationalSubject where
   tamilShow = \case
-    Adhu    -> "adhu"
-    Avai    -> "avai"
+    Adhu -> convertInitialN "adhu"
+    Avai -> convertInitialN "avai"
 
 instance Show IrrationalSubject where
   show = map toLower . toLatin . tamilShow
@@ -78,10 +78,10 @@ relativeSuffix subject =
 
 instance TamilShow ThirdPersonSubject where
   tamilShow = \case
-    Avan         -> "avan"
-    Aval         -> "avaL"
-    Avar         -> "avar"
-    Avargal      -> "avargaL"
+    Avan         -> convertInitialN "avan"
+    Aval         -> convertInitialN "avaL"
+    Avar         -> convertInitialN "avar"
+    Avargal      -> convertInitialN "avargaL"
     Irrational i -> tamilShow i
 
 instance Show ThirdPersonSubject where
@@ -100,12 +100,12 @@ data Subject
 
 instance TamilShow Subject where
   tamilShow = \case
-    Naan    -> "naan"
-    Naam    -> "naam"
-    Naangal -> "naangaL"
-    Nee     -> "nee"
-    Neer    -> "neer"
-    Neengal -> "neengaL"
+    Naan    -> convertInitialN "naan"
+    Naam    -> convertInitialN "naam"
+    Naangal -> convertInitialN "naangaL"
+    Nee     -> convertInitialN "nee"
+    Neer    -> convertInitialN "neer"
+    Neengal -> convertInitialN "neengaL"
     Third t -> tamilShow t
 
 instance Show Subject where
@@ -456,6 +456,12 @@ data TenseConjugation
   | Present
   | Future
 
+instance Show TenseConjugation where
+  show = \case
+    Past    -> "past"
+    Present -> "present"
+    Future  -> "future"
+
 -- | Conjugate a verb with a certain tense and subject
 conjugateFinite :: TenseConjugation -> Subject -> Verb -> ChoiceString
 conjugateFinite tense subject verb =
@@ -566,7 +572,6 @@ data NegativeConjugation
   | NegativeAdverb                      -- ^ (e.g. @seyyaamal@)
   | NegativeConditional                 -- ^ (e.g. @seyyaaviTTaal@)
   | NegativeCommand Respectful          -- ^ (e.g. @seyyaadhE@, @seyyaadheergaL@)
-  deriving Show
 
 -- | A helper verb that is used for 'NegativeFuture' conjugations
 maaTTu :: Verb
@@ -608,6 +613,7 @@ conjugateNegative conjugation verb =
       getNegativeFutureAdhuRoot verb |+ "aadhE"
     NegativeCommand True ->
       getNegativeFutureAdhuRoot verb |+ "aadheergaL"
+        <> demote (getNegativeFutureAdhuRoot verb |+ "aadheer")
 
 -- | Represents a way to conjugate a verb
 data Conjugation

@@ -1,8 +1,18 @@
 # tamil-verbs
 
-Conjugate Tamil verbs in various forms for different subjects
+Conjugate Tamil verbs in various forms for different subjects, or generate quiz
+questions to practice conjugations.
 
 ## Examples
+
+### Requesting conjugations of verbs
+
+There are two ways to request conjugations of verbs. One way is to enter
+interactive mode by simply running `tamil-verbs` with no arguments. A prompt
+will open where you can request different conjugations. Another way is to
+request a conjugation from the command line through `tamil-verbs conjugate`.
+Both Tamil verbs and English definitions can be used to find a verb. For a list
+of all possible conjugations, see `tamil-verbs conjugate --help`.
 
 ```
 > vaa past avan
@@ -48,61 +58,40 @@ Conjugate Tamil verbs in various forms for different subjects
 கொண்டுவந்தால் (koNDuvandhaal)
 ```
 
-## Valid conjugation arguments
+### Generating quiz questions
 
-- `past`: past tense
-- `present`: present tense
-- `future`: future tense
-- `infinitive`: infinitive
-- `adverb`: adverb or AvP
-- `adjective`: verbal adjective
-- `relative`: relative noun referring to someone who does the action
-- `noun`: verbal noun referring to the action of the verb
-- `conditional`/`if`: conditional clauses like "if" in English
-- `command`: imperative command
-- `negative`: make the conjugation negative
-- `respectful`: make the conjugation respectful (for `command`)
-- `guess`: if there is no known definition, guess how to conjugate the verb
-  based on how it looks and based on similarities to other verbs
-- `alternative`: show alternative conjugations which are valid but less common
-- `tamil`: only show the result in Tamil letters
-- `latin`/`english`: only show the result in Latin letters
+There is also a command to generate quiz questions for conjugations of verbs.
+The basic command is `tamil-verbs learn`, but there are many flags that can be
+used to configure the generation of questions. See `tamil-verbs learn --help`
+for more information.
 
-*There are also many abbreviated forms of these arguments which are accepted.*
-
-## Extra features
-
-Many alternative conjugations are supported which can be shown using
-`alternative`. Additionally, verbs and subjects can be given using either Latin
-or Tamil letters. Arguments can also be separated by hyphens or commas.
+#### Practice with only past tense `adhu` and adverbs in Latin letters
 
 ```
-> be-known
-தெரிந்தது (terindhadhu)
-தெரிகிறது (terigiRadhu)
-தெரியும் (teriyum)
-தெரிந்து (terindhu)
-தெரிய (teriya)
+$ tamil-verbs learn --latin 'af/p/a'
 ```
 
-```
-> paDi present-nee-latin-alt
-paDikkiRaay; paDikkindRaay
-```
+#### Generate 100 questions and store them in `quiz.txt` and `quiz_key.txt`
 
 ```
-> சொல் past அது tamil alternative
-சொன்னது, சொல்லியது, சொல்லிற்று; சொல்லினது
+$ tamil-verbs learn --count 100 --output 'quiz.txt'
 ```
 
-## Vocab lists
+#### Generate 25 questions on Class 3 verbs and output to `stdout` and `stderr`
 
-There is a built-in vocab list with some very basic verbs, but if you want to
-use your own vocab list, you can load a custom list of verbs by passing a path
-to the file as a command-line argument, by setting the `TAMIL_VERB_LIST`
-environment variable, or by using `:load <file>` (see `:help` for a list of all
-commands). This repository also contains an extended vocab list called
-[verbs.txt](verbs.txt) with some more advanced verbs.
+```
+$ grep ^3 verbs.txt | tamil-verbs learn --list '-' --count 25
+```
+
+## Verb lists
+
+There is a built-in verb list with some very basic verbs, but if you want to
+use your own verb list, you can load a custom list of verbs by passing a path
+to the file as a command-line argument with the option `--list`, by setting the
+`TAMIL_VERB_LIST` environment variable, or by using `:load <file>` in
+interactive mode (see `:help` for a list of all commands). This repository also
+contains an extended verb list called [verbs.txt](verbs.txt) with some more
+advanced verbs.
 
 The basic format of a verb entry is:
 

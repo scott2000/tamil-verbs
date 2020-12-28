@@ -104,12 +104,13 @@ getConjugations cr verb =
         Just subject ->
           subject
         Nothing
-          | defective -> Third $ Irrational Adhu
-          | inanimate -> Third $ Irrational Adhu
+          | inanimate || defective ->
+            Third $ Irrational Adhu
           | otherwise -> Naan
     thirdSubject =
       case crSubject cr of
         Just (Third subject) -> subject
+        Nothing | defective -> Irrational Adhu
         _ -> Avar
     parseNegative =
       case crType cr of
@@ -337,16 +338,19 @@ parseConjugationRequest parts = do
               Left _ -> Nothing
               Right subject ->
                 let
-                  normalized =
-                    case normalize subject of
-                      TamilString str | last str == Vowel (I Short) ->
-                        -- Replace idhu and edhu with adhu
-                        TamilString $ init str ++ [Vowel (A Short)]
-                      other -> other
+                  subject' =
+                    case reverse $ untamil subject of
+                      -- Replace 'idhu' with 'adhu'
+                      Vowel (I Short) : rest ->
+                        TamilString $ reverse $ Vowel (A Short) : rest
+                      -- Replace 'edhu' with 'adhu'
+                      Vowel (E Short) : rest ->
+                        TamilString $ reverse $ Vowel (A Short) : rest
+                      _ -> subject
                   findSubject [] = Nothing
                   findSubject (s:ss)
-                    | normalize (tamilShow s) == normalized = Just s
-                    | otherwise                             = findSubject ss
+                    | isSimilar pLenient subject' (tamilShow s) = Just s
+                    | otherwise = findSubject ss
                 in
                   findSubject allSubjects
           of
@@ -570,45 +574,42 @@ lookupVerb verbList showTamil allowGuess word =
                     Right $ guess True verbList tamil
                   else
                     Left $ "verb not found" ++
-                      let
-                        normalized = normalize tamil
-                        suggestions = filter ((normalized ==) . normalize) $ HashMap.keys $ byRoot verbList
-                      in
-                        case take 3 $ sort suggestions of
-                          [] ->
-                            let
-                              hasUpperCaseOrTamil = any (not . isAsciiLower) word
-                              endsWithNonEnglish =
-                                case untamil tamil of
-                                  Consonant (Medium LAlveolar) : _  -> True
-                                  Consonant (Medium LRetroflex) : _ -> True
-                                  Vowel (U Short) : _ -> True
-                                  Vowel (I Short) : _ -> True
-                                  _ -> False
-                              isSpecial = \case
-                                Consonant (Soft Ny) -> True
-                                Consonant (Medium Zh) -> True
-                                Vowel (A Long) -> True
-                                Vowel (E Long) -> True
-                                Vowel (O Long) -> True
-                                Vowel Au -> True
+                      let suggestions = filter (isSimilar pLookup tamil) $ HashMap.keys $ byRoot verbList in
+                      case take 3 $ sort suggestions of
+                        [] ->
+                          let
+                            hasUpperCaseOrTamil = any (not . isAsciiLower) word
+                            endsWithNonEnglish =
+                              case untamil tamil of
+                                Consonant (Medium LAlveolar) : _  -> True
+                                Consonant (Medium LRetroflex) : _ -> True
+                                Vowel (U Short) : _ -> True
+                                Vowel (I Short) : _ -> True
                                 _ -> False
-                              looksLikeTamil =
-                                hasUpperCaseOrTamil || endsWithNonEnglish || any isSpecial (untamil tamil)
-                              looksLikeTamilVerb =
-                                looksLikeTamil && looksLikeVerb tamil
-                            in
-                              -- Only allow no-info guessing if the word looks like a predictable Tamil verb
-                              case guess looksLikeTamilVerb verbList tamil of
-                                [] -> ""
-                                list@(_ : _ : _) | any (null . verbDefinitions . snd) list ->
-                                  -- If there are multiple choices and it wasn't a known word, don't recommend
-                                  ""
-                                _ ->
-                                  " (maybe try again with 'guess'?)"
-                          suggestions ->
-                            let showFunction = if all isAscii word then toLatin else toTamil in
-                            " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
+                            isSpecial = \case
+                              Consonant (Soft Ny) -> True
+                              Consonant (Medium Zh) -> True
+                              Vowel (A Long) -> True
+                              Vowel (E Long) -> True
+                              Vowel (O Long) -> True
+                              Vowel Au -> True
+                              _ -> False
+                            looksLikeTamil =
+                              hasUpperCaseOrTamil || endsWithNonEnglish || any isSpecial (untamil tamil)
+                            looksLikeTamilVerb =
+                              looksLikeTamil && looksLikeVerb tamil
+                          in
+                            -- Only allow no-info guessing if the word looks like a predictable Tamil verb
+                            case guess looksLikeTamilVerb verbList tamil of
+                              [] -> ""
+                              list@(_ : _ : _) | any (null . verbDefinitions . snd) list ->
+                                -- If there are multiple choices and it wasn't a known word, don't recommend
+                                ""
+                              _ ->
+                                " (maybe try again with 'guess'?)"
+                        suggestions ->
+                          let showFunction = if all isAscii word then toLatin else toTamil in
+                          " (did you mean " ++ intercalate " or " (map showFunction suggestions) ++ "?)"
 
 -- | Processes a conjugation request for a given verb with given arguments in a given 'VerbList'
 processRequest :: VerbList -> String -> String -> IO ()

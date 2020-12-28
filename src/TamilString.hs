@@ -807,12 +807,72 @@ toTamil (TamilString str) =
         Aaydham : rest ->
           go ('ஃ' : acc) rest
 
--- | Convert a 'TamilString' to a normalized form for comparison purposes
-normalize :: TamilString -> TamilString
-normalize =
-  TamilString . map go . untamil
+-- | Check if two 'TamilString's are similar using a predicate to check if two 'TamilLetter's are similar
+isSimilar :: (TamilLetter -> TamilLetter -> Bool) -> TamilString -> TamilString -> Bool
+isSimilar eq (TamilString a) (TamilString b) =
+  go a b
   where
-    go = \case
+    go [] [] = True
+    go (x:xs) (y:ys) =
+      x `eq` y && go xs ys
+    go _ _ = False
+
+-- | Like 'isSimilar', but allows a single insertion, replacement, or deletion as well
+isWithinOneEdit :: (TamilLetter -> TamilLetter -> Bool) -> TamilString -> TamilString -> Bool
+isWithinOneEdit eq (TamilString a) (TamilString b) =
+  go a b
+  where
+    a =~= b = isSimilar eq (TamilString a) (TamilString b)
+    go [] [] = True
+    go [_] [] = True
+    go [] [_] = True
+    go (x:xs) (y:ys)
+      | x `eq` y = go xs ys
+      | otherwise =
+        xs =~= ys || xs =~= (y:ys) || (x:xs) =~= ys
+    go _ _ = False
+
+-- | Check if two 'TamilLetter's are similar enough that @--lenient@ should accept them for @learn@
+pLenient :: TamilLetter -> TamilLetter -> Bool
+pLenient a b =
+  normalizeLetter a == normalizeLetter b
+  where
+    normalizeLetter = \case
+      Vowel (A _) -> Vowel $ A Short
+      Vowel (I _) -> Vowel $ I Short
+      Vowel (U _) -> Vowel $ U Short
+      Vowel (E _) -> Vowel $ E Short
+      Vowel Ai    -> Vowel $ E Short
+      Vowel (O _) -> Vowel $ O Short
+      Vowel Au    -> Vowel $ O Short
+      Consonant (Hard TRetroflex)   -> Consonant $ Hard TDental
+      Consonant (Hard RAlveolar)    -> Consonant $ Medium R
+      Consonant (Soft _)            -> Consonant $ Soft NDental
+      Consonant (Medium LRetroflex) -> Consonant $ Medium LAlveolar
+      Consonant (Grantha H)         -> Consonant $ Hard K
+      Consonant (Grantha _)         -> Consonant $ Hard Ch
+      other -> other
+
+-- | Check if two 'TamilLetter's are similar enough that they should be suggested if a word isn't found
+pLookup :: TamilLetter -> TamilLetter -> Bool
+pLookup a b =
+  case (a, b) of
+    -- 'R' is similar to 'th'
+    (Consonant (Hard RAlveolar), Consonant (Hard TDental)) -> True
+    (Consonant (Hard TDental), Consonant (Hard RAlveolar)) -> True
+    -- 'ch' is similar to 'th'
+    (Consonant (Hard Ch), Consonant (Hard TDental)) -> True
+    (Consonant (Hard TDental), Consonant (Hard Ch)) -> True
+    -- 'ny' is similar to 'nh'
+    (Consonant (Soft Ny), Consonant (Soft NDental)) -> True
+    (Consonant (Soft NDental), Consonant (Soft Ny)) -> True
+    -- 'zh' is similar to 'y'
+    (Consonant (Medium Zh), Consonant (Medium Y)) -> True
+    (Consonant (Medium Y), Consonant (Medium Zh)) -> True
+    _ ->
+      normalizeLetter a == normalizeLetter b
+  where
+    normalizeLetter = \case
       Vowel (A _) -> Vowel $ A Short
       Vowel (U _) -> Vowel $ U Short
       Vowel (O _) -> Vowel $ U Short
