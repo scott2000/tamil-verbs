@@ -501,6 +501,10 @@ conjugateFinite tense subject verb =
 
 -- | Conjugate a verb as an adjective
 conjugateAdjective :: TenseConjugation -> Verb -> ChoiceString
+conjugateAdjective Past verb
+  | verbClass verb == Class3 =
+    -- Don't include 'yitru' forms even though they follow the "drop -dhu" rule since they aren't in use
+    getClass3PastNYForm verb |+ "a"
 conjugateAdjective tense verb =
   forChoice (conjugateFinite tense (Third $ Irrational Adhu) verb) \case
     TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->

@@ -77,10 +77,10 @@ $ tamil-verbs learn --latin 'af/p/a'
 $ tamil-verbs learn --count 100 --output 'quiz.txt'
 ```
 
-#### Generate 25 questions on Class 3 verbs and output to `stdout` and `stderr`
+#### Generate 15 questions on Class 3 verbs and output to `stdout` and `stderr`
 
 ```
-$ grep ^3 verbs.txt | tamil-verbs learn --list '-' --count 25
+$ grep ^3 verbs.txt | tamil-verbs learn --list '-' --count 15
 ```
 
 ## Verb lists

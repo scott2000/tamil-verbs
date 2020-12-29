@@ -161,7 +161,7 @@ help ("learn":_) = do
     [ "Usage: " ++ name ++ " learn [--list VERB_LIST] ... [CONFIGURATION]"
     , ""
     , "Available arguments:"
-    , "  --count NUM     Set the number of questions to generate (default: 10)"
+    , "  --count NUM     Set the number of questions to generate (default: 25)"
     , "  --output FILE   Save questions to a file instead of asking directly"
     , "  --strict        Only give one attempt at answering a question"
     , "  --lenient       Allow small mistakes in answers (e.g. 'r' instead of 'R')"
@@ -200,7 +200,8 @@ help ("learn":_) = do
     , "  past            fa/p                Just past and adverb"
     , "  default         fai/-/-r            All tenses, adverb, and infinite"
     , "  extended        faijcAJCFP          Adds adjectives, commands, and negatives"
-    , "  classical       faijcAJCL//-        Uses classical negatives, includes neer"
+    , "  classical       faijcAJCL//-        Uses classical negatives; includes neer"
+    , "  common          -nNL                All of the most common conjugations"
     , "  all             -//-                Includes any possible conjugation"
     , ""
     , "Presets may be used by writing their name instead of the configuration"
@@ -285,6 +286,8 @@ learn =
           return "faijcAJCFP"
         ["classical"] ->
           return "faijcAJCL//-"
+        ["common"] ->
+          return "-nNL"
         ["all"] ->
           return "-//-"
         [config] ->
@@ -296,7 +299,7 @@ learn =
     learnCount <-
       case HashMap.lookup "count" o >>= readMaybe of
         Nothing ->
-          return 10
+          return 25
         Just count
           | count > 0, count <= 100000 ->
             return count

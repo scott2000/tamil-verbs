@@ -304,9 +304,9 @@ showConjugation showTamil word = \case
   Negative negative ->
     case negative of
       NegativePastPresent ->
-        "negative past/present of " ++ word
+        "negative past/present tense of " ++ word
       NegativeFuture subject ->
-        "negative future of " ++ word ++ " for " ++ sSub subject
+        "negative future tense of " ++ word ++ " for " ++ sSub subject
       NegativeClassical subject ->
         "classical negative of " ++ word ++ " for " ++ sSub subject
       NegativeAdjective ->
@@ -369,72 +369,83 @@ matchingDefinition verbList definition note =
       Just verbs -> verbs
   where
     hasExactMatch verb =
-      verbNote verb == note && definition `elem` verbDefinitions verb
+      verbNote verb == note && findDefinition (verbDefinitions verb)
+
+    findDefinition [] = False
+    findDefinition (d : ds)
+      | vDefinitionNote d == vDefinitionNote definition
+      , vDefinition     d == vDefinition     definition = True
+      | otherwise = findDefinition ds
 
 -- | Generate questions to ask based on the settings, and pass them to a provided function
 generateQuestions :: Monoid a => LearnSettings -> Config -> (Int -> String -> [ChoiceString] -> IO a) -> IO a
 generateQuestions LearnSettings { .. } config f = do
   g <- createSystemRandom
-  go g 1 mempty Set.empty
+  go g 1 mempty Nothing Set.empty
   where
-    go g n correct verbs
+    go g n correct lastVerb verbs
       | n > learnCount = return correct
       | Set.null verbs =
-        go g n correct $ allVerbs learnVerbList
+        -- We're out of verbs, so start repeating verbs a second time
+        go g n correct lastVerb $ allVerbs learnVerbList
       | otherwise = do
         -- Pick a random verb
         k <- upTo g $ Set.size verbs
         let
           verb = Set.elemAt k verbs
           verbs' = Set.deleteAt k verbs
-        -- Pick a definition for the question
-        pickDefinition g (verbDefinitions verb) >>= \case
-          Nothing ->
-            -- If there is no definition, skip the verb
-            go g n correct verbs'
-          Just definition -> do
-            -- Pick a random conjugation that fits the verb
-            conjugation <- randomConjugation config verb definition g
-            let
-              -- Find verbs that match the definition
-              matchingVerbs = matchingDefinition learnVerbList definition $ verbNote verb
-              -- Find verbs that match both definition and root
-              fullVerb = getFullVerb verb
-              filteredMatching = flip filter matchingVerbs \verb ->
-                getFullVerb verb == fullVerb
-              -- Include the verb if necessary if VerbIfNecessary is set, otherwise follow the specified flag
-              includeVerb =
-                case learnVerbStyle of
-                  DefinitionOnly -> False
-                  VerbIfNecessary ->
-                    case matchingVerbs of
-                      [_] -> False
-                      _ ->
-                        length filteredMatching < length matchingVerbs
-                  VerbAlways -> True
-              -- Format the definition so that the main definition is in quotes but not the note
-              definitionString =
-                "\"" ++ vDefinition definition ++ "\"" ++
-                  case vDefinitionNote definition of
-                    "" -> ""
-                    note -> " (" ++ note ++ ")"
-              -- Format the verb prompt and find which verbs are possible based on this information
-              (wordPrompt, matchingVerbs') =
-                if includeVerb then
-                  (learnShowTamil fullVerb ++ " " ++ definitionString, filteredMatching)
-                else
-                  (definitionString, matchingVerbs)
-              -- Format the full question based on the conjugation
-              question =
-                "What is the " ++ showConjugation learnShowTamil wordPrompt conjugation ++ "?" ++
-                  case verbNote verb of
-                    "" -> ""
-                    note -> " [note: " ++ note ++ "]"
-              -- Find the answers that could match the question
-              answers =
-                map (conjugate conjugation) matchingVerbs'
-            score <- f n question answers
-            go g (n + 1) (correct <> score) verbs'
+        if lastVerb == Just verb then
+          -- If the verb is the same as the previous verb (possible if the list is repeating), try again
+          go g n correct Nothing verbs
+        else
+          -- Pick a definition for the question
+          pickDefinition g (verbDefinitions verb) >>= \case
+            Nothing ->
+              -- If there is no definition, skip the verb
+              go g n correct lastVerb verbs'
+            Just definition -> do
+              -- Pick a random conjugation that fits the verb
+              conjugation <- randomConjugation config verb definition g
+              let
+                -- Find verbs that match the definition
+                matchingVerbs = matchingDefinition learnVerbList definition $ verbNote verb
+                -- Find verbs that match both definition and root
+                fullVerb = getFullVerb verb
+                filteredMatching = flip filter matchingVerbs \verb ->
+                  getFullVerb verb == fullVerb
+                -- Include the verb if necessary if VerbIfNecessary is set, otherwise follow the specified flag
+                includeVerb =
+                  case learnVerbStyle of
+                    DefinitionOnly -> False
+                    VerbIfNecessary ->
+                      case matchingVerbs of
+                        [_] -> False
+                        _ ->
+                          length filteredMatching < length matchingVerbs
+                    VerbAlways -> True
+                -- Format the definition so that the main definition is in quotes but not the note
+                definitionString =
+                  "\"" ++ vDefinition definition ++ "\"" ++
+                    case vDefinitionNote definition of
+                      "" -> ""
+                      note -> " (" ++ note ++ ")"
+                -- Format the verb prompt and find which verbs are possible based on this information
+                (wordPrompt, matchingVerbs') =
+                  if includeVerb then
+                    (learnShowTamil fullVerb ++ " " ++ definitionString, filteredMatching)
+                  else
+                    (definitionString, matchingVerbs)
+                -- Format the full question based on the conjugation
+                question =
+                  "What is the " ++ showConjugation learnShowTamil wordPrompt conjugation ++ "?" ++
+                    case verbNote verb of
+                      "" -> ""
+                      note -> " [note: " ++ note ++ "]"
+                -- Find the answers that could match the question
+                answers =
+                  map (conjugate conjugation) matchingVerbs'
+              score <- f n question answers
+              go g (n + 1) (correct <> score) (Just verb) verbs'
 
 -- | Represents how correct an answer is
 data AnswerScore

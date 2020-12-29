@@ -363,6 +363,7 @@ parseTamilSuffix :: String -> Either String TamilString
 parseTamilSuffix str = TamilString <$> foldM convert [] str
   where
     convert str = \case
+      -- Latin vowels
       'a' -> vowelCombinations [(A Short, A Long)] $ A Short
       'A' -> vowel $ A Long
       'i' -> vowelCombinations [(A Short, Ai)] $ I Short
@@ -374,6 +375,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
       'o' -> vowelCombinations [(O Short, U Long)] $ O Short
       'O' -> vowel $ O Long
 
+      -- Latin consonants
       'k' -> consonant $ Hard K
       'g' -> voiced K
 
@@ -453,6 +455,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
           _ ->
             Left "'~' can only occur after 'ng'"
 
+      -- Tamil vowels
       'அ' -> vowel $ A Short
       'ஆ' -> vowel $ A Long
       'இ' -> vowel $ I Short
@@ -466,6 +469,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
       'ஓ' -> vowel $ O Long
       'ஔ' -> vowel Au
 
+      -- Tamil combining vowels
       '\x0bbe' ->
         case str of
           Vowel v : rest ->
@@ -514,6 +518,7 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
           _ ->
             Left "pulli can only occur after 'a'"
 
+      -- Tamil consonants
       'க' -> consonantA $ Hard K
       'ச' -> consonantA $ Hard Ch
       'ட' -> consonantA $ Hard TRetroflex
@@ -542,6 +547,36 @@ parseTamilSuffix str = TamilString <$> foldM convert [] str
       'ஹ' -> consonantA $ Grantha H
       'ஶ' -> consonantA $ Grantha SSh
       'ஃ' -> aaydham
+
+      -- ISO 15919 (note that 'J', 'S', and 'H' are still required for distinguishing Grantha consonants)
+      'ā' -> vowel $ A Long
+      'ī' -> vowel $ I Long
+      'ū' -> vowel $ U Long
+      'ē' -> vowel $ E Long
+      'ō' -> vowel $ O Long
+
+      'ḵ' -> aaydham
+
+      'ṅ' -> consonant $ Soft Ng
+      'ñ' -> consonant $ Soft Ny
+      'ṭ' -> consonant $ Hard TRetroflex
+      'ḍ' -> consonant $ Hard TRetroflex
+      'ṇ' -> consonant $ Soft NRetroflex
+      'ḷ' -> consonant $ Medium LRetroflex
+      'ḻ' -> consonant $ Medium Zh
+      'ṟ' -> consonant $ Hard RAlveolar
+      'ṉ' -> consonant $ Hard RAlveolar
+      'ṣ' -> consonant $ Grantha Sh
+      'ś' -> consonant $ Grantha SSh
+
+      -- Pseudo-IPA (like in Colloquial Tamil) but consonants only
+      'ŋ' -> consonant $ Soft Ng
+      'ɲ' -> consonant $ Soft Ny
+      'ʈ' -> consonant $ Hard TRetroflex
+      'ɖ' -> consonant $ Hard TRetroflex
+      'ɳ' -> consonant $ Soft NRetroflex
+      'ɭ' -> consonant $ Medium LRetroflex
+      'ʐ' -> consonant $ Medium Zh
 
       ' ' ->
         Left "word cannot contain spaces"
@@ -847,10 +882,12 @@ pLenient a b =
       Vowel Au    -> Vowel $ O Short
       Consonant (Hard TRetroflex)   -> Consonant $ Hard TDental
       Consonant (Hard RAlveolar)    -> Consonant $ Medium R
-      Consonant (Soft _)            -> Consonant $ Soft NDental
+      Consonant (Soft NRetroflex)   -> Consonant $ Soft NDental
+      Consonant (Soft NAlveolar)    -> Consonant $ Soft NDental
       Consonant (Medium LRetroflex) -> Consonant $ Medium LAlveolar
       Consonant (Grantha H)         -> Consonant $ Hard K
       Consonant (Grantha _)         -> Consonant $ Hard Ch
+      Aaydham                       -> Consonant $ Hard K
       other -> other
 
 -- | Check if two 'TamilLetter's are similar enough that they should be suggested if a word isn't found
@@ -876,6 +913,7 @@ pLookup a b =
       Vowel (A _) -> Vowel $ A Short
       Vowel (U _) -> Vowel $ U Short
       Vowel (O _) -> Vowel $ U Short
+      Vowel Au    -> Vowel $ U Short
       Vowel _     -> Vowel $ I Short
       Consonant (Hard TRetroflex)   -> Consonant $ Hard TDental
       Consonant (Hard RAlveolar)    -> Consonant $ Medium R
