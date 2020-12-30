@@ -465,8 +465,8 @@ instance Show TenseConjugation where
 -- | Conjugate a verb with a certain tense and subject
 conjugateFinite :: TenseConjugation -> Subject -> Verb -> ChoiceString
 conjugateFinite tense subject verb =
-  case (tense, verbClass verb, subject) of
-    (Past, Class3, Third (Irrational Adhu)) ->
+  case (tense, subject) of
+    (Past, Third (Irrational Adhu)) | verbClass verb == Class3 ->
       let
         ny = getClass3PastNYForm verb
         yitru =
@@ -477,7 +477,7 @@ conjugateFinite tense subject verb =
               Nothing
       in
         ny |+ "adhu" <> promote yitru
-    (Past, _, _) ->
+    (Past, _) ->
       usingAvaiSuffix subject \avai ->
         if avai then
           if verbClass verb == Class3 then
@@ -490,45 +490,36 @@ conjugateFinite tense subject verb =
             getPast verb |+ "an"
         else
           getPast verb
-    (Present, _, _) ->
+    (Present, _) ->
       usingAvaiSuffix subject $ getPresent verb
-    (Future, _, Third (Irrational Adhu)) ->
+    (Future, Third (Irrational Adhu)) ->
       getFutureAdhu verb
-    (Future, _, Third (Irrational Avai)) ->
+    (Future, Third (Irrational Avai)) ->
       getFutureAdhu verb <> getFuture verb |+ "ana"
-    (Future, _, _) ->
+    (Future, _) ->
       commonSuffix subject $ getFuture verb
 
--- | Conjugate a verb as an adjective
-conjugateAdjective :: TenseConjugation -> Verb -> ChoiceString
-conjugateAdjective Past verb
-  | verbClass verb == Class3 =
-    -- Don't include 'yitru' forms even though they follow the "drop -dhu" rule since they aren't in use
-    getClass3PastNYForm verb |+ "a"
-conjugateAdjective tense verb =
-  forChoice (conjugateFinite tense (Third $ Irrational Adhu) verb) \case
-    TamilString (Vowel (U Short) : Consonant (Hard TDental) : rest) ->
-      TamilString rest
-    other ->
-      other
+-- | Appends a suffix if past/present and returns a default value if future
+getAdjective :: TenseConjugation -> Verb -> ChoiceString -> ChoiceString -> ChoiceString
+getAdjective tense verb suffix future =
+  case tense of
+    Past
+      | verbClass verb == Class3 ->
+        getClass3PastNYForm verb |+| suffix
+      | otherwise ->
+        getPast verb |+| suffix
+    Present ->
+      getPresent verb False |+| suffix
+    Future ->
+      future
 
 -- | Conjugate a verb as a relative clause
 conjugateRelative :: TenseConjugation -> ThirdPersonSubject -> Verb -> ChoiceString
 conjugateRelative tense subject verb =
-  case tense of
-    Past
-      | verbClass verb == Class3 ->
-        getClass3PastNYForm verb |+| subjectSuffix
-      | otherwise ->
-        getPast verb |+| subjectSuffix
-    Present ->
-      getPresent verb False |+| subjectSuffix
-    Future ->
-      promote $
-        oneOrTwoOnStem P verb |+| pRelativeSuffix subject
-        <> getFuture verb |+| demote (vRelativeSuffix subject)
-  where
-    subjectSuffix = relativeSuffix subject
+  getAdjective tense verb (relativeSuffix subject) $
+    promote $
+      oneOrTwoOnStem P verb |+| pRelativeSuffix subject
+      <> getFuture verb |+| demote (vRelativeSuffix subject)
 
 -- | Represents whether a conjugation for a command should be respectful
 type Respectful = Bool
@@ -550,7 +541,7 @@ conjugatePositive conjugation verb =
     Finite tense subject ->
       conjugateFinite tense subject verb
     Adjective tense ->
-      conjugateAdjective tense verb
+      getAdjective tense verb "a" $ getFutureAdhu verb
     Relative tense subject ->
       conjugateRelative tense subject verb
     Adverb ->
