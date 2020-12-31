@@ -531,7 +531,7 @@ checkAnswer mayRetry check showTamil answers = do
               "The answer was any of " ++ showChoices answer ++ "."
             answers ->
               "There are multiple verbs that would be correct:" ++
-                concatMap (\answer -> "\n" ++ showChoices answer) answers
+                concatMap (\answer -> "\n- " ++ showChoices answer) answers
       putStrLn $ header ++ msg
       return False
 
